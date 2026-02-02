@@ -18,7 +18,7 @@ app.use('/', healthRoutes);
 
 // Route racine optionnelle
 app.get('/', (req, res) => {
-  res.json({ message: 'Sokhra Backend API' });
+  res.json({ message: 'SOKHRA, Backend API' });
 });
 
 // Gestion des erreurs 404
