@@ -2,6 +2,8 @@ import express, { Express } from 'express';
 import dotenv from 'dotenv';
 import { connectDB } from './config/database';
 import healthRoutes from './routes/health';
+import authRoutes from './routes/auth';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -14,17 +16,19 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-app.use('/', healthRoutes);
-
-// Route racine optionnelle
 app.get('/', (req, res) => {
   res.json({ message: 'SOKHRA, Backend API' });
 });
 
+app.use('/', healthRoutes);
+app.use('/api/v1/auth', authRoutes);
+
+
 // Gestion des erreurs 404
-app.use((req, res) => {
-  res.status(404).json({ error: 'Route non trouvée' });
-});
+app.use(notFoundHandler);
+
+// Middleware de gestion d'erreurs global (doit être en dernier)
+app.use(errorHandler);
 
 // Démarrage du serveur
 async function startServer() {
