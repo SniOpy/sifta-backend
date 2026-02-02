@@ -237,3 +237,6 @@ Si vous rencontrez une erreur lors du démarrage du serveur :
 ✅ La connexion PostgreSQL est établie au démarrage  
 ✅ Les variables d'environnement sont correctement chargées  
 ✅ Le code est en TypeScript avec types stricts
+
+
+Nouveau test
