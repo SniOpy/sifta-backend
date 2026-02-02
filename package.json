@@ -1,0 +1,30 @@
+{
+  "name": "sokhra-backend",
+  "version": "1.0.0",
+  "description": "Backend minimal Express avec TypeScript et PostgreSQL",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "bash scripts/with-nvm.sh ts-node-dev --respawn --transpile-only src/index.ts",
+    "build": "bash scripts/with-nvm.sh tsc",
+    "start": "bash scripts/with-nvm.sh node dist/index.js",
+    "type-check": "bash scripts/with-nvm.sh tsc --noEmit",
+    "db:check": "bash scripts/with-nvm.sh ts-node scripts/check-db.ts",
+    "db:init": "echo 'Pour initialiser la base de données, exécutez une des commandes suivantes:' && echo '' && echo 'Option 1 (recommandé):' && echo '  psql -U postgres -f scripts/init-db.sql' && echo '' && echo 'Option 2:' && echo '  cat scripts/init-db.sql | psql -U postgres' && echo '' && echo 'Option 3 (interactif):' && echo '  psql -U postgres' && echo '  puis copiez-collez le contenu de scripts/init-db.sql' && echo '' && echo 'Note: Vous devrez peut-être modifier les variables dans init-db.sql' && echo 'pour correspondre à votre fichier .env'"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "dotenv": "^16.3.1",
+    "pg": "^8.11.3"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.5",
+    "@types/pg": "^8.10.9",
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0"
+  }
+}
