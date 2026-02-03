@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import { NotFoundError, TooManyRequestsError, ValidationError } from '../../../shared/errors/appError';
+import { NotFoundError, TooManyRequestsError, ValidationError, InternalServerError } from '../../../shared/errors/appError';
 import { createOTPForPhone, verifyOTP } from '../../otp/services/otpService';
 import { sendOTP } from '../../../services/smsService';
 import { findActiveOTP, incrementAttempts, deleteOTPByPhone } from '../../otp/models/otpModel';
@@ -63,31 +63,25 @@ export class AuthService {
     // 1. Trouver l'OTP actif pour ce téléphone (vérifie déjà l'expiration)
     const otp = await findActiveOTP(phone);
 
-    // 2. Vérifier si l'OTP existe
+    // 2. Vérifier si l'OTP existe (findActiveOTP vérifie déjà l'expiration)
     if (!otp) {
       throw new NotFoundError('Aucun code OTP actif trouvé pour ce numéro de téléphone');
     }
 
-    // 3. Vérifier si l'OTP est expiré (double vérification côté application)
-    const now = new Date();
-    if (otp.expires_at <= now) {
-      throw new ValidationError('Le code OTP a expiré. Veuillez demander un nouveau code');
-    }
-
-    // 4. Vérifier si le nombre de tentatives a été dépassé
+    // 3. Vérifier si le nombre de tentatives a été dépassé
     if (otp.attempts >= MAX_OTP_ATTEMPTS) {
       throw new TooManyRequestsError(
         `Le nombre maximum de tentatives (${MAX_OTP_ATTEMPTS}) a été atteint. Veuillez demander un nouveau code OTP`
       );
     }
 
-    // 5. Incrémenter le compteur de tentatives
+    // 4. Incrémenter le compteur de tentatives
     const updatedOtp = await incrementAttempts(otp.id);
     if (!updatedOtp) {
-      throw new Error('Erreur lors de la mise à jour des tentatives OTP');
+      throw new InternalServerError('Erreur lors de la mise à jour des tentatives OTP');
     }
 
-    // 6. Vérifier le code OTP
+    // 5. Vérifier le code OTP
     const isValid = await verifyOTP(code, otp.code_hash);
 
     if (!isValid) {
@@ -95,16 +89,16 @@ export class AuthService {
       throw new ValidationError('Le code OTP est incorrect');
     }
 
-    // 7. Code correct : créer ou trouver l'utilisateur
+    // 6. Code correct : créer ou trouver l'utilisateur
     const user = await findOrCreateUser(phone);
 
-    // 8. Générer les tokens JWT (Access Token + Refresh Token)
+    // 7. Générer les tokens JWT (Access Token + Refresh Token)
     const tokens = await generateTokens(user);
 
-    // 9. Supprimer l'OTP après succès
+    // 8. Supprimer l'OTP après succès
     await deleteOTPByPhone(phone);
 
-    // 10. Retourner résultat avec données utilisateur minimales et tokens
+    // 9. Retourner résultat avec données utilisateur minimales et tokens
     return {
       user: {
         id: user.id,

@@ -77,3 +77,13 @@ export class TooManyRequestsError extends AppError {
     this.name = 'TooManyRequestsError';
   }
 }
+
+/**
+ * Erreur interne du serveur
+ */
+export class InternalServerError extends AppError {
+  constructor(message: string = 'Erreur interne du serveur') {
+    super(message, 500);
+    this.name = 'InternalServerError';
+  }
+}

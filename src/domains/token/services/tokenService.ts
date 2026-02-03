@@ -94,12 +94,12 @@ export function generateRefreshToken(): string {
 }
 
 /**
- * Génère une paire de tokens (Access Token + Refresh Token)
- * et sauvegarde le refresh token hashé en base de données
+ * Crée une paire de tokens (Access Token + Refresh Token) et sauvegarde le refresh token hashé
+ * Fonction privée réutilisée par generateTokens et refreshTokenFlow
  * @param user - Utilisateur pour lequel générer les tokens
  * @returns Paire de tokens {accessToken, refreshToken}
  */
-export async function generateTokens(user: User): Promise<TokenPair> {
+async function createTokenPair(user: User): Promise<TokenPair> {
   ensureJWTSecret();
 
   // Générer les tokens
@@ -119,6 +119,16 @@ export async function generateTokens(user: User): Promise<TokenPair> {
     accessToken,
     refreshToken,
   };
+}
+
+/**
+ * Génère une paire de tokens (Access Token + Refresh Token)
+ * et sauvegarde le refresh token hashé en base de données
+ * @param user - Utilisateur pour lequel générer les tokens
+ * @returns Paire de tokens {accessToken, refreshToken}
+ */
+export async function generateTokens(user: User): Promise<TokenPair> {
+  return createTokenPair(user);
 }
 
 /**
@@ -178,24 +188,6 @@ export async function refreshTokenFlow(refreshToken: string): Promise<TokenPair>
   // 4. Révoquer l'ancien refresh token (rotation)
   await revokeRefreshToken(existingToken.id);
 
-  // 5. Générer nouveau access token
-  const newAccessToken = generateAccessToken(user);
-
-  // 6. Générer nouveau refresh token
-  const newRefreshToken = generateRefreshToken();
-
-  // 7. Hash le nouveau refresh token
-  const tokenHash = await hashRefreshToken(newRefreshToken);
-
-  // 8. Calculer la date d'expiration du nouveau refresh token
-  const expiresAt = calculateExpiresAt(JWT_REFRESH_EXPIRES_IN);
-
-  // 9. Sauvegarder le nouveau refresh token hashé en base
-  await saveRefreshToken(user.id, tokenHash, expiresAt);
-
-  // 10. Retourner nouvelle paire de tokens
-  return {
-    accessToken: newAccessToken,
-    refreshToken: newRefreshToken,
-  };
+  // 5. Créer nouvelle paire de tokens (réutilise la logique commune)
+  return createTokenPair(user);
 }

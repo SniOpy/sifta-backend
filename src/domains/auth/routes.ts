@@ -3,6 +3,7 @@ import { requestOTP, verifyOTPController, refreshTokenController } from './contr
 import { otpRateLimit } from '../../middleware/rateLimit';
 import { validateRequestOTP, validateVerifyOTP, validateRefreshToken } from './validators/authValidators';
 import { checkValidationErrors } from '../../middleware/validate';
+import { asyncHandler } from '../../shared/utils/asyncHandler';
 
 const router = Router();
 
@@ -20,7 +21,7 @@ router.post(
   otpRateLimit, // Rate limiting en premier
   validateRequestOTP, // Validation
   checkValidationErrors, // Vérification des erreurs de validation
-  requestOTP // Contrôleur
+  asyncHandler(requestOTP) // Contrôleur avec gestion automatique des erreurs
 );
 
 /**
@@ -37,7 +38,7 @@ router.post(
   otpRateLimit, // Rate limiting en premier
   validateVerifyOTP, // Validation
   checkValidationErrors, // Vérification des erreurs de validation
-  verifyOTPController // Contrôleur
+  asyncHandler(verifyOTPController) // Contrôleur avec gestion automatique des erreurs
 );
 
 /**
@@ -54,7 +55,7 @@ router.post(
   otpRateLimit, // Rate limiting en premier
   validateRefreshToken, // Validation
   checkValidationErrors, // Vérification des erreurs de validation
-  refreshTokenController // Contrôleur
+  asyncHandler(refreshTokenController) // Contrôleur avec gestion automatique des erreurs
 );
 
 export default router;

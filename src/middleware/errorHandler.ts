@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../shared/errors/appError';
 import { errorResponse } from '../shared/responses/apiResponse';
+import { logError } from '../shared/utils/logger';
 
 /**
  * Middleware de gestion d'erreurs global
@@ -14,6 +15,13 @@ export function errorHandler(
 ): void {
   // Erreurs AppError personnalisées
   if (err instanceof AppError) {
+    // Logger uniquement les erreurs serveur (500) ou en développement
+    if (err.statusCode >= 500 || process.env.NODE_ENV === 'development') {
+      logError(`Route ${req.method} ${req.path}`, err, {
+        statusCode: err.statusCode,
+      });
+    }
+
     errorResponse(
       res,
       err.name,
@@ -24,8 +32,11 @@ export function errorHandler(
     return;
   }
 
-  // Erreurs générales
-  console.error('Erreur:', err);
+  // Erreurs générales non capturées
+  logError(`Route ${req.method} ${req.path}`, err, {
+    url: req.url,
+    method: req.method,
+  });
 
   const statusCode = err.statusCode || err.status || 500;
   const message =
