@@ -1,11 +1,21 @@
 import express, { Express } from 'express';
 import dotenv from 'dotenv';
 import { connectDB } from './config/database';
+import { validateEnv } from './config/env';
 import routes from './routes';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { startOTPCleanupJob } from './shared/utils/cleanup';
 
 // Charger les variables d'environnement
 dotenv.config();
+
+// Valider les variables d'environnement requises avant de continuer
+try {
+  validateEnv();
+} catch (error: any) {
+  console.error('❌ Erreur de configuration:', error.message);
+  process.exit(1);
+}
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
@@ -33,7 +43,14 @@ async function startServer() {
   try {
     // Connexion à la base de données
     await connectDB();
-    
+
+    // Démarrer le job de nettoyage automatique des OTP expirés
+    const cleanupInterval = parseInt(
+      process.env.OTP_CLEANUP_INTERVAL_MINUTES || '60',
+      10
+    );
+    startOTPCleanupJob(cleanupInterval);
+
     // Démarrage du serveur Express
     app.listen(PORT, () => {
       console.log(`🚀 Serveur démarré sur le port ${PORT}`);
