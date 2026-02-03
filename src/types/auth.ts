@@ -18,6 +18,22 @@ export interface RequestOTPResponse {
 }
 
 /**
+ * Requête pour vérifier un code OTP
+ */
+export interface VerifyOTPRequest {
+  phone: string;
+  code: string;
+}
+
+/**
+ * Réponse après vérification d'OTP
+ */
+export interface VerifyOTPResponse {
+  success: boolean;
+  message: string;
+}
+
+/**
  * Modèle OTP en base de données
  */
 export interface OTPCode {

@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { requestOTP } from '../controllers/authController';
+import { requestOTP, verifyOTPController } from '../controllers/authController';
 import { otpRateLimit } from '../middleware/rateLimit';
-import { validateRequestOTP, checkValidationErrors } from '../middleware/validate';
+import { validateRequestOTP, validateVerifyOTP, checkValidationErrors } from '../middleware/validate';
 
 const router = Router();
 
@@ -20,6 +20,23 @@ router.post(
   validateRequestOTP, // Validation
   checkValidationErrors, // Vérification des erreurs de validation
   requestOTP // Contrôleur
+);
+
+/**
+ * Route POST /verify-otp
+ * Permet à un utilisateur de vérifier un code OTP
+ * 
+ * Middleware appliqué dans l'ordre:
+ * 1. Rate limiting (par téléphone)
+ * 2. Validation (format téléphone et code OTP)
+ * 3. Contrôleur (vérification OTP, gestion expiration, limitation tentatives)
+ */
+router.post(
+  '/verify-otp',
+  otpRateLimit, // Rate limiting en premier
+  validateVerifyOTP, // Validation
+  checkValidationErrors, // Vérification des erreurs de validation
+  verifyOTPController // Contrôleur
 );
 
 export default router;
