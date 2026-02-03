@@ -1,4 +1,11 @@
-import { PhoneValidationResult } from '../types/auth';
+/**
+ * Résultat de validation de téléphone
+ */
+export interface PhoneValidationResult {
+  valid: boolean;
+  normalized?: string;
+  error?: string;
+}
 
 /**
  * Regex pour valider le format de téléphone marocain

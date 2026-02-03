@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { validationResult } from 'express-validator';
+import { AppError } from '../shared/errors/appError';
+import { errorResponse } from '../shared/responses/apiResponse';
 
 /**
  * Middleware de gestion d'erreurs global
@@ -11,21 +12,15 @@ export function errorHandler(
   res: Response,
   next: NextFunction
 ): void {
-  // Erreurs de validation express-validator
-  const validationErrors = validationResult(req);
-  if (!validationErrors.isEmpty()) {
-    const formattedErrors: Record<string, string> = {};
-    validationErrors.array().forEach((error: any) => {
-      if (error.type === 'field') {
-        formattedErrors[error.path] = error.msg;
-      }
-    });
-
-    res.status(400).json({
-      success: false,
-      error: 'Validation error',
-      details: formattedErrors,
-    });
+  // Erreurs AppError personnalisées
+  if (err instanceof AppError) {
+    errorResponse(
+      res,
+      err.name,
+      err.message,
+      err.statusCode,
+      err instanceof Error && 'details' in err ? (err as any).details : undefined
+    );
     return;
   }
 
@@ -36,12 +31,13 @@ export function errorHandler(
   const message =
     err.message || 'Une erreur est survenue lors du traitement de votre demande';
 
-  res.status(statusCode).json({
-    success: false,
-    error: statusCode === 500 ? 'Erreur interne du serveur' : err.name || 'Error',
-    message: statusCode === 500 ? 'Une erreur est survenue' : message,
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
-  });
+  errorResponse(
+    res,
+    statusCode === 500 ? 'Erreur interne du serveur' : err.name || 'Error',
+    statusCode === 500 ? 'Une erreur est survenue' : message,
+    statusCode,
+    process.env.NODE_ENV === 'development' ? { stack: err.stack } : undefined
+  );
 }
 
 /**

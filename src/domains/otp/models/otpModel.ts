@@ -1,5 +1,5 @@
-import pool from '../config/database';
-import { OTPCode } from '../types/auth';
+import pool from '../../../config/database';
+import { OTPCode } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 /**

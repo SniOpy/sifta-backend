@@ -1,12 +1,17 @@
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
-import { User } from '../types/auth';
+import { User } from '../../user/types';
 import {
   saveRefreshToken,
   hashRefreshToken,
   findRefreshToken,
-} from '../models/RefreshToken';
+  findRefreshTokenByToken,
+  revokeRefreshToken,
+} from '../models/refreshTokenModel';
+import { TokenPair, JWTPayload } from '../types';
+import { UnauthorizedError, NotFoundError } from '../../../shared/errors/appError';
+import { getUserById } from '../../user/services/userService';
 
 dotenv.config();
 
@@ -94,10 +99,7 @@ export function generateRefreshToken(): string {
  * @param user - Utilisateur pour lequel générer les tokens
  * @returns Paire de tokens {accessToken, refreshToken}
  */
-export async function generateTokens(user: User): Promise<{
-  accessToken: string;
-  refreshToken: string;
-}> {
+export async function generateTokens(user: User): Promise<TokenPair> {
   ensureJWTSecret();
 
   // Générer les tokens
@@ -124,21 +126,11 @@ export async function generateTokens(user: User): Promise<{
  * @param token - Access Token à vérifier
  * @returns Payload décodé ou null si invalide
  */
-export function verifyAccessToken(token: string): {
-  sub: string;
-  phone: string;
-  iat: number;
-  exp: number;
-} | null {
+export function verifyAccessToken(token: string): JWTPayload | null {
   ensureJWTSecret();
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET!) as {
-      sub: string;
-      phone: string;
-      iat: number;
-      exp: number;
-    };
+    const decoded = jwt.verify(token, JWT_SECRET!) as JWTPayload;
     return decoded;
   } catch (error) {
     return null;
@@ -157,4 +149,53 @@ export async function verifyRefreshToken(
 ): Promise<boolean> {
   const refreshToken = await findRefreshToken(userId, token);
   return refreshToken !== null;
+}
+
+/**
+ * Orchestre le flux de rafraîchissement de token avec rotation
+ * @param refreshToken - Refresh token à utiliser pour générer de nouveaux tokens
+ * @returns Nouvelle paire de tokens (accessToken + refreshToken)
+ * @throws UnauthorizedError si le refresh token est invalide, expiré ou révoqué
+ * @throws NotFoundError si l'utilisateur associé n'existe pas
+ */
+export async function refreshTokenFlow(refreshToken: string): Promise<TokenPair> {
+  ensureJWTSecret();
+
+  // 1. Trouver le refresh token en base
+  const existingToken = await findRefreshTokenByToken(refreshToken);
+
+  // 2. Vérifier si le token existe et est valide
+  if (!existingToken) {
+    throw new UnauthorizedError('Refresh token invalide ou expiré');
+  }
+
+  // 3. Récupérer l'utilisateur associé
+  const user = await getUserById(existingToken.user_id);
+  if (!user) {
+    throw new NotFoundError('Utilisateur associé au refresh token non trouvé');
+  }
+
+  // 4. Révoquer l'ancien refresh token (rotation)
+  await revokeRefreshToken(existingToken.id);
+
+  // 5. Générer nouveau access token
+  const newAccessToken = generateAccessToken(user);
+
+  // 6. Générer nouveau refresh token
+  const newRefreshToken = generateRefreshToken();
+
+  // 7. Hash le nouveau refresh token
+  const tokenHash = await hashRefreshToken(newRefreshToken);
+
+  // 8. Calculer la date d'expiration du nouveau refresh token
+  const expiresAt = calculateExpiresAt(JWT_REFRESH_EXPIRES_IN);
+
+  // 9. Sauvegarder le nouveau refresh token hashé en base
+  await saveRefreshToken(user.id, tokenHash, expiresAt);
+
+  // 10. Retourner nouvelle paire de tokens
+  return {
+    accessToken: newAccessToken,
+    refreshToken: newRefreshToken,
+  };
 }
