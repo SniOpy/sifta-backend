@@ -31,6 +31,26 @@ export interface VerifyOTPRequest {
 export interface VerifyOTPResponse {
   success: boolean;
   message: string;
+  user?: UserMinimal;
+}
+
+/**
+ * Données utilisateur minimales retournées après vérification OTP
+ */
+export interface UserMinimal {
+  id: string;
+  phone: string;
+  created_at: Date;
+}
+
+/**
+ * Modèle User en base de données
+ */
+export interface User {
+  id: string;
+  phone: string;
+  created_at: Date;
+  updated_at: Date;
 }
 
 /**
