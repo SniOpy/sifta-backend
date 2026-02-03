@@ -63,7 +63,7 @@ PORT=3000
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=sokhra_db
-DB_USER=spkhra_user
+DB_USER=sokhra_user
 DB_PASSWORD=MadapesAgencyCreation
 ```
 
@@ -100,13 +100,13 @@ Si vous préférez créer manuellement :
 psql -U postgres
 
 -- Créer l'utilisateur
-CREATE USER spkhra_user WITH PASSWORD 'MadapesAgencyCreation';
+CREATE USER sokhra_user WITH PASSWORD 'MadapesAgencyCreation';
 
 -- Créer la base de données
-CREATE DATABASE sokhra_db OWNER spkhra_user;
+CREATE DATABASE sokhra_db OWNER sokhra_user;
 
 -- Accorder les privilèges
-GRANT ALL PRIVILEGES ON DATABASE sokhra_db TO spkhra_user;
+GRANT ALL PRIVILEGES ON DATABASE sokhra_db TO sokhra_user;
 ```
 
 ## Démarrage

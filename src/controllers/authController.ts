@@ -4,6 +4,7 @@ import { RequestOTPResponse, VerifyOTPResponse } from '../types/auth';
 import { createOTPForPhone, verifyOTP } from '../services/otpService';
 import { sendOTP } from '../services/smsService';
 import { findActiveOTP, incrementAttempts, deleteOTPByPhone } from '../models/OTPCode';
+import { findOrCreateUser } from '../models/User';
 
 dotenv.config();
 
@@ -117,23 +118,42 @@ export async function verifyOTPController(
       return;
     }
 
-    // 7. Code correct : supprimer l'OTP et retourner succès
+    // 7. Code correct : créer ou trouver l'utilisateur
+    const user = await findOrCreateUser(phone);
+
+    // 8. Supprimer l'OTP après succès
     await deleteOTPByPhone(phone);
 
+    // 9. Retourner succès avec données utilisateur minimales
     const response: VerifyOTPResponse = {
       success: true,
       message: 'Code OTP vérifié avec succès',
+      user: {
+        id: user.id,
+        phone: user.phone,
+        created_at: user.created_at,
+      },
     };
 
     res.status(200).json(response);
   } catch (error: any) {
     console.error('Erreur lors de la vérification d\'OTP:', error);
+    console.error('Détails de l\'erreur:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      stack: error.stack,
+    });
 
     // Réponse d'erreur standardisée
     res.status(500).json({
       success: false,
       error: 'Erreur interne du serveur',
       message: 'Une erreur est survenue lors de la vérification du code OTP',
+      // En développement, on peut inclure plus de détails
+      ...(process.env.NODE_ENV !== 'production' && {
+        details: error.message,
+      }),
     });
   }
 }
