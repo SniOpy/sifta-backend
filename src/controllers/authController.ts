@@ -5,6 +5,7 @@ import { createOTPForPhone, verifyOTP } from '../services/otpService';
 import { sendOTP } from '../services/smsService';
 import { findActiveOTP, incrementAttempts, deleteOTPByPhone } from '../models/OTPCode';
 import { findOrCreateUser } from '../models/User';
+import { generateTokens } from '../services/jwtService';
 
 dotenv.config();
 
@@ -121,10 +122,13 @@ export async function verifyOTPController(
     // 7. Code correct : créer ou trouver l'utilisateur
     const user = await findOrCreateUser(phone);
 
-    // 8. Supprimer l'OTP après succès
+    // 8. Générer les tokens JWT (Access Token + Refresh Token)
+    const tokens = await generateTokens(user);
+
+    // 9. Supprimer l'OTP après succès
     await deleteOTPByPhone(phone);
 
-    // 9. Retourner succès avec données utilisateur minimales
+    // 10. Retourner succès avec données utilisateur minimales et tokens
     const response: VerifyOTPResponse = {
       success: true,
       message: 'Code OTP vérifié avec succès',
@@ -132,6 +136,10 @@ export async function verifyOTPController(
         id: user.id,
         phone: user.phone,
         created_at: user.created_at,
+      },
+      tokens: {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
       },
     };
 
