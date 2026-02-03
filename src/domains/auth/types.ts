@@ -67,3 +67,19 @@ export interface RefreshTokenResponse {
   message: string;
   tokens: TokenPair;
 }
+
+/**
+ * Requête pour se déconnecter (logout)
+ * Pas de body requis, l'utilisateur est identifié via le token JWT
+ */
+export interface LogoutRequest {
+  // Vide, pas de body requis
+}
+
+/**
+ * Réponse après déconnexion (logout)
+ */
+export interface LogoutResponse {
+  success: boolean;
+  message: string;
+}

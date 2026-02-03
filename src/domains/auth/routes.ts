@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requestOTP, verifyOTPController, refreshTokenController, getCurrentUser } from './controllers/authController';
+import { requestOTP, verifyOTPController, refreshTokenController, getCurrentUser, logoutController } from './controllers/authController';
 import { otpRateLimit } from '../../middleware/rateLimit';
 import { validateRequestOTP, validateVerifyOTP, validateRefreshToken } from './validators/authValidators';
 import { checkValidationErrors } from '../../middleware/validate';
@@ -72,6 +72,21 @@ router.get(
   '/me',
   authenticateJWT, // Authentification JWT en premier
   asyncHandler(getCurrentUser) // Contrôleur avec gestion automatique des erreurs
+);
+
+/**
+ * Route POST /logout
+ * Route protégée nécessitant une authentification JWT
+ * Révoque tous les refresh tokens de l'utilisateur, invalidant sa session sur tous les appareils
+ * 
+ * Middleware appliqué dans l'ordre:
+ * 1. Authentification JWT (vérifie le token et injecte req.user)
+ * 2. Contrôleur (révoque tous les refresh tokens de l'utilisateur)
+ */
+router.post(
+  '/logout',
+  authenticateJWT, // Authentification JWT en premier
+  asyncHandler(logoutController) // Contrôleur avec gestion automatique des erreurs
 );
 
 export default router;
