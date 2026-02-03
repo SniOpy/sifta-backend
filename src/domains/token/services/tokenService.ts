@@ -9,9 +9,10 @@ import {
   findRefreshTokenByToken,
   revokeRefreshToken,
 } from '../models/refreshTokenModel';
-import { TokenPair, JWTPayload } from '../types';
+import { TokenPair, JWTPayload, RefreshToken } from '../types';
 import { UnauthorizedError, NotFoundError } from '../../../shared/errors/appError';
 import { getUserById } from '../../user/services/userService';
+import pool from '../../../config/database';
 
 dotenv.config();
 
@@ -171,13 +172,55 @@ export async function verifyRefreshToken(
 export async function refreshTokenFlow(refreshToken: string): Promise<TokenPair> {
   ensureJWTSecret();
 
-  // 1. Trouver le refresh token en base
-  const existingToken = await findRefreshTokenByToken(refreshToken);
-
-  // 2. Vérifier si le token existe et est valide
-  if (!existingToken) {
-    throw new UnauthorizedError('Refresh token invalide ou expiré');
+  // 1. Vérifier d'abord tous les tokens (y compris révoqués) pour donner un message d'erreur précis
+  const { verifyRefreshTokenHash } = await import('../models/refreshTokenModel');
+  const allTokensQuery = `
+    SELECT id, user_id, token_hash, expires_at, revoked, created_at 
+    FROM refresh_tokens 
+    ORDER BY created_at DESC
+  `;
+  const allTokensResult = await pool.query(allTokensQuery);
+  
+  let foundToken: RefreshToken | null = null;
+  let isRevoked = false;
+  let isExpired = false;
+  
+  // Vérifier chaque token pour trouver une correspondance
+  for (const row of allTokensResult.rows) {
+    const matches = await verifyRefreshTokenHash(refreshToken, row.token_hash);
+    if (matches) {
+      foundToken = {
+        id: row.id,
+        user_id: row.user_id,
+        token_hash: row.token_hash,
+        expires_at: new Date(row.expires_at),
+        revoked: row.revoked,
+        created_at: new Date(row.created_at),
+      };
+      isRevoked = row.revoked;
+      const expiresAt = new Date(row.expires_at);
+      isExpired = expiresAt <= new Date();
+      break; // Token trouvé, arrêter la recherche
+    }
   }
+  
+  // 2. Gérer les différents cas d'erreur avec messages précis
+  if (!foundToken) {
+    throw new UnauthorizedError('Refresh token invalide');
+  }
+  
+  if (isRevoked) {
+    throw new UnauthorizedError(
+      'Ce refresh token a déjà été utilisé. Veuillez utiliser le nouveau refresh token reçu lors du dernier rafraîchissement.'
+    );
+  }
+  
+  if (isExpired) {
+    throw new UnauthorizedError('Refresh token expiré. Veuillez vous ré-authentifier.');
+  }
+  
+  // 3. Token valide, continuer avec le flux
+  const existingToken = foundToken;
 
   // 3. Récupérer l'utilisateur associé
   const user = await getUserById(existingToken.user_id);

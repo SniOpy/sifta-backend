@@ -176,34 +176,40 @@ export async function deleteExpiredTokens(): Promise<number> {
 export async function findRefreshTokenByToken(
   token: string
 ): Promise<RefreshToken | null> {
-  const query = `
+  // D'abord, chercher tous les tokens (y compris révoqués) pour vérifier si le token existe mais est révoqué
+  const allTokensQuery = `
     SELECT * FROM refresh_tokens
-    WHERE expires_at > NOW() 
-      AND revoked = FALSE
     ORDER BY created_at DESC
   `;
+  const allTokensResult = await pool.query(allTokensQuery);
 
-  const result = await pool.query(query);
-
-  if (result.rows.length === 0) {
-    return null;
-  }
-
-  // Vérifier chaque token hashé jusqu'à trouver une correspondance
-  for (const row of result.rows) {
+  // Vérifier si le token existe mais est révoqué
+  for (const row of allTokensResult.rows) {
     const isValid = await verifyRefreshTokenHash(token, row.token_hash);
     if (isValid) {
+      // Token trouvé, vérifier son statut
+      if (row.revoked) {
+        // Token révoqué (probablement déjà utilisé)
+        return null; // Retourner null pour indiquer qu'il n'est plus valide
+      }
+      // Vérifier l'expiration
+      const expiresAt = new Date(row.expires_at);
+      if (expiresAt <= new Date()) {
+        return null; // Token expiré
+      }
+      // Token valide
       return {
         id: row.id,
         user_id: row.user_id,
         token_hash: row.token_hash,
-        expires_at: new Date(row.expires_at),
+        expires_at: expiresAt,
         revoked: row.revoked,
         created_at: new Date(row.created_at),
       };
     }
   }
 
+  // Aucun token correspondant trouvé
   return null;
 }
 
