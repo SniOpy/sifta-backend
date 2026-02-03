@@ -25,6 +25,37 @@ export const validateRequestOTP: ValidationChain[] = [
 ];
 
 /**
+ * Middleware de validation pour la vérification d'OTP
+ */
+export const validateVerifyOTP: ValidationChain[] = [
+  body('phone')
+    .notEmpty()
+    .withMessage('Le numéro de téléphone est requis')
+    .isString()
+    .withMessage('Le numéro de téléphone doit être une chaîne de caractères')
+    .custom((value) => {
+      const validation = validatePhoneFormat(value);
+      if (!validation.valid) {
+        throw new Error(validation.error || 'Format de téléphone invalide');
+      }
+      return true;
+    })
+    .customSanitizer((value) => {
+      // Normaliser le téléphone avant de continuer
+      return normalizePhone(value);
+    }),
+  body('code')
+    .notEmpty()
+    .withMessage('Le code OTP est requis')
+    .isString()
+    .withMessage('Le code OTP doit être une chaîne de caractères')
+    .isLength({ min: 6, max: 6 })
+    .withMessage('Le code OTP doit contenir exactement 6 chiffres')
+    .matches(/^\d+$/)
+    .withMessage('Le code OTP doit contenir uniquement des chiffres'),
+];
+
+/**
  * Middleware pour vérifier les résultats de validation
  * Doit être utilisé après les validateurs express-validator
  */
