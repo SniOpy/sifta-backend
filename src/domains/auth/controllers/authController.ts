@@ -1,0 +1,68 @@
+import { Request, Response } from 'express';
+import { authService } from '../services/authService';
+import { refreshTokenFlow } from '../../token/services/tokenService';
+import { successResponse } from '../../../shared/responses/apiResponse';
+
+/**
+ * Contrôleur pour la demande d'OTP
+ * @param req - Requête Express avec body.phone (déjà validé et normalisé)
+ * @param res - Réponse Express
+ */
+export async function requestOTP(
+  req: Request,
+  res: Response
+): Promise<void> {
+  const { phone } = req.body;
+
+  const result = await authService.requestOTPFlow(phone);
+
+  successResponse(res, { message: result.message }, result.message, 200);
+}
+
+/**
+ * Contrôleur pour la vérification d'OTP
+ * @param req - Requête Express avec body.phone et body.code (déjà validés et normalisés)
+ * @param res - Réponse Express
+ */
+export async function verifyOTPController(
+  req: Request,
+  res: Response
+): Promise<void> {
+  const { phone, code } = req.body;
+
+  const result = await authService.verifyOTPFlow(phone, code);
+
+  successResponse(
+    res,
+    {
+      user: result.user,
+      tokens: result.tokens,
+    },
+    'Code OTP vérifié avec succès',
+    200
+  );
+}
+
+/**
+ * Contrôleur pour le rafraîchissement de token
+ * @param req - Requête Express avec body.refreshToken (déjà validé)
+ * @param res - Réponse Express
+ */
+export async function refreshTokenController(
+  req: Request,
+  res: Response
+): Promise<void> {
+  const { refreshToken } = req.body;
+
+  const tokens = await refreshTokenFlow(refreshToken);
+
+  successResponse(
+    res,
+    {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    },
+    'Tokens rafraîchis avec succès',
+    200
+  );
+}

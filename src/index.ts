@@ -1,8 +1,7 @@
 import express, { Express } from 'express';
 import dotenv from 'dotenv';
 import { connectDB } from './config/database';
-import healthRoutes from './routes/health';
-import authRoutes from './routes/auth';
+import routes from './routes';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 
 // Charger les variables d'environnement
@@ -20,8 +19,7 @@ app.get('/', (req, res) => {
   res.json({ message: 'SOKHRA, Backend API' });
 });
 
-app.use('/', healthRoutes);
-app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1', routes);
 
 
 // Gestion des erreurs 404

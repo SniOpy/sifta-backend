@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
-import { createOTP, deleteOTPByPhone, deleteExpiredOTPs } from '../models/OTPCode';
+import { createOTP, deleteOTPByPhone, deleteExpiredOTPs } from '../models/otpModel';
 
 dotenv.config();
 

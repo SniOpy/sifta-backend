@@ -1,5 +1,5 @@
-import pool from '../config/database';
-import { RefreshToken } from '../types/auth';
+import pool from '../../../config/database';
+import { RefreshToken } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
 
@@ -165,6 +165,46 @@ export async function deleteExpiredTokens(): Promise<number> {
   const query = 'DELETE FROM refresh_tokens WHERE expires_at <= NOW()';
   const result = await pool.query(query);
   return result.rowCount || 0;
+}
+
+/**
+ * Trouve un refresh token valide par sa valeur (sans connaître userId)
+ * Recherche dans tous les tokens valides et vérifie le hash
+ * @param token - Refresh token en clair
+ * @returns Le refresh token trouvé avec user_id ou null
+ */
+export async function findRefreshTokenByToken(
+  token: string
+): Promise<RefreshToken | null> {
+  const query = `
+    SELECT * FROM refresh_tokens
+    WHERE expires_at > NOW() 
+      AND revoked = FALSE
+    ORDER BY created_at DESC
+  `;
+
+  const result = await pool.query(query);
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  // Vérifier chaque token hashé jusqu'à trouver une correspondance
+  for (const row of result.rows) {
+    const isValid = await verifyRefreshTokenHash(token, row.token_hash);
+    if (isValid) {
+      return {
+        id: row.id,
+        user_id: row.user_id,
+        token_hash: row.token_hash,
+        expires_at: new Date(row.expires_at),
+        revoked: row.revoked,
+        created_at: new Date(row.created_at),
+      };
+    }
+  }
+
+  return null;
 }
 
 /**
