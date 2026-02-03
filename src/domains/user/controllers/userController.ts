@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { getUserById } from '../services/userService';
 import { successResponse } from '../../../shared/responses/apiResponse';
 import { UnauthorizedError, NotFoundError } from '../../../shared/errors/appError';
+import { AuthErrorMessages } from '../../auth/constants/errorMessages';
 
 /**
  * Contrôleur pour obtenir les informations de l'utilisateur authentifié
@@ -19,14 +20,14 @@ export async function getCurrentUser(
   if (!req.user) {
     // Cette erreur ne devrait jamais se produire si le middleware fonctionne correctement
     // mais on la gère pour la sécurité TypeScript
-    throw new UnauthorizedError('Utilisateur non authentifié');
+    throw new UnauthorizedError(AuthErrorMessages.USER.NOT_AUTHENTICATED);
   }
 
   // Charger l'utilisateur complet depuis la DB pour obtenir created_at et updated_at réels
   const user = await getUserById(req.user.id);
 
   if (!user) {
-    throw new NotFoundError('Utilisateur non trouvé');
+    throw new NotFoundError(AuthErrorMessages.USER.NOT_FOUND);
   }
 
   // Retourner les informations utilisateur complètes

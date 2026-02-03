@@ -4,6 +4,7 @@ import { refreshTokenFlow } from '../../token/services/tokenService';
 import { successResponse } from '../../../shared/responses/apiResponse';
 import { UnauthorizedError } from '../../../shared/errors/appError';
 import { revokeAllUserTokens } from '../../token/models/refreshTokenModel';
+import { AuthErrorMessages } from '../constants/errorMessages';
 
 /**
  * Contrôleur pour la demande d'OTP
@@ -84,7 +85,7 @@ export async function getCurrentUser(
   if (!req.user) {
     // Cette erreur ne devrait jamais se produire si le middleware fonctionne correctement
     // mais on la gère pour la sécurité TypeScript
-    throw new UnauthorizedError('Utilisateur non authentifié');
+    throw new UnauthorizedError(AuthErrorMessages.USER.NOT_AUTHENTICATED);
   }
 
   successResponse(
@@ -111,7 +112,7 @@ export async function logoutController(
 ): Promise<void> {
   // req.user est garanti d'exister grâce au middleware authenticateJWT
   if (!req.user) {
-    throw new UnauthorizedError('Utilisateur non authentifié');
+    throw new UnauthorizedError(AuthErrorMessages.USER.NOT_AUTHENTICATED);
   }
 
   // Révoquer tous les refresh tokens de l'utilisateur

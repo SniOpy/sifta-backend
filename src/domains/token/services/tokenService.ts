@@ -13,6 +13,7 @@ import { TokenPair, JWTPayload, RefreshToken } from '../types';
 import { UnauthorizedError, NotFoundError } from '../../../shared/errors/appError';
 import { getUserById } from '../../user/services/userService';
 import pool from '../../../config/database';
+import { AuthErrorMessages } from '../../auth/constants/errorMessages';
 
 dotenv.config();
 
@@ -26,10 +27,7 @@ const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
  */
 function ensureJWTSecret(): void {
   if (!JWT_SECRET) {
-    throw new Error(
-      'JWT_SECRET n\'est pas défini dans les variables d\'environnement. ' +
-        'Veuillez définir JWT_SECRET dans votre fichier .env'
-    );
+    throw new Error(AuthErrorMessages.TOKEN.JWT_SECRET_MISSING);
   }
 }
 
@@ -206,17 +204,15 @@ export async function refreshTokenFlow(refreshToken: string): Promise<TokenPair>
   
   // 2. Gérer les différents cas d'erreur avec messages précis
   if (!foundToken) {
-    throw new UnauthorizedError('Refresh token invalide');
+    throw new UnauthorizedError(AuthErrorMessages.TOKEN.REFRESH_INVALID);
   }
   
   if (isRevoked) {
-    throw new UnauthorizedError(
-      'Ce refresh token a déjà été utilisé. Veuillez utiliser le nouveau refresh token reçu lors du dernier rafraîchissement.'
-    );
+    throw new UnauthorizedError(AuthErrorMessages.TOKEN.REFRESH_USED);
   }
   
   if (isExpired) {
-    throw new UnauthorizedError('Refresh token expiré. Veuillez vous ré-authentifier.');
+    throw new UnauthorizedError(AuthErrorMessages.TOKEN.REFRESH_EXPIRED);
   }
   
   // 3. Token valide, continuer avec le flux
@@ -225,7 +221,7 @@ export async function refreshTokenFlow(refreshToken: string): Promise<TokenPair>
   // 3. Récupérer l'utilisateur associé
   const user = await getUserById(existingToken.user_id);
   if (!user) {
-    throw new NotFoundError('Utilisateur associé au refresh token non trouvé');
+    throw new NotFoundError(AuthErrorMessages.USER.REFRESH_TOKEN_USER_NOT_FOUND);
   }
 
   // 4. Révoquer l'ancien refresh token (rotation)

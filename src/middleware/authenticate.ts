@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../domains/token/services/tokenService';
 import { UnauthorizedError } from '../shared/errors/appError';
 import { UserMinimal } from '../domains/auth/types';
+import { AuthErrorMessages } from '../domains/auth/constants/errorMessages';
 
 /**
  * Middleware d'authentification JWT
@@ -30,13 +31,13 @@ export async function authenticateJWT(
 
   // 2. Vérifier la présence du header
   if (!authHeader) {
-    throw new UnauthorizedError('Token d\'authentification requis');
+    throw new UnauthorizedError(AuthErrorMessages.TOKEN.REQUIRED);
   }
 
   // 3. Vérifier le format "Bearer <token>"
   const parts = authHeader.split(' ');
   if (parts.length !== 2 || parts[0] !== 'Bearer') {
-    throw new UnauthorizedError('Format de token invalide. Utilisez: Bearer <token>');
+    throw new UnauthorizedError(AuthErrorMessages.TOKEN.INVALID_FORMAT);
   }
 
   // 4. Extraire le token
@@ -47,7 +48,7 @@ export async function authenticateJWT(
 
   // 6. Si le token est invalide ou expiré
   if (!payload) {
-    throw new UnauthorizedError('Token invalide ou expiré');
+    throw new UnauthorizedError(AuthErrorMessages.TOKEN.INVALID_OR_EXPIRED);
   }
 
   // 7. Créer UserMinimal depuis le payload JWT et l'injecter dans req.user

@@ -6,6 +6,7 @@ import { findActiveOTP, incrementAttempts, deleteOTPByPhone } from '../../otp/mo
 import { findOrCreateUser } from '../../user/services/userService';
 import { generateTokens } from '../../token/services/tokenService';
 import { UserMinimal, TokenPair } from '../types';
+import { AuthErrorMessages } from '../constants/errorMessages';
 
 dotenv.config();
 
@@ -65,20 +66,18 @@ export class AuthService {
 
     // 2. Vérifier si l'OTP existe (findActiveOTP vérifie déjà l'expiration)
     if (!otp) {
-      throw new NotFoundError('Aucun code OTP actif trouvé pour ce numéro de téléphone');
+      throw new NotFoundError(AuthErrorMessages.OTP.NOT_FOUND);
     }
 
     // 3. Vérifier si le nombre de tentatives a été dépassé
     if (otp.attempts >= MAX_OTP_ATTEMPTS) {
-      throw new TooManyRequestsError(
-        `Le nombre maximum de tentatives (${MAX_OTP_ATTEMPTS}) a été atteint. Veuillez demander un nouveau code OTP`
-      );
+      throw new TooManyRequestsError(AuthErrorMessages.OTP.MAX_ATTEMPTS(MAX_OTP_ATTEMPTS));
     }
 
     // 4. Incrémenter le compteur de tentatives
     const updatedOtp = await incrementAttempts(otp.id);
     if (!updatedOtp) {
-      throw new InternalServerError('Erreur lors de la mise à jour des tentatives OTP');
+      throw new InternalServerError(AuthErrorMessages.OTP.UPDATE_FAILED);
     }
 
     // 5. Vérifier le code OTP
@@ -86,7 +85,7 @@ export class AuthService {
 
     if (!isValid) {
       // Code incorrect, mais on a déjà incrémenté les tentatives
-      throw new ValidationError('Le code OTP est incorrect');
+      throw new ValidationError(AuthErrorMessages.OTP.INVALID);
     }
 
     // 6. Code correct : créer ou trouver l'utilisateur
