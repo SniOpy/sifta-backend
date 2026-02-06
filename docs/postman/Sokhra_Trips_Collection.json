@@ -1,0 +1,636 @@
+{
+	"info": {
+		"_postman_id": "sokhra-trips-collection",
+		"name": "Sokhra - Trips API",
+		"description": "Collection complète pour tester toutes les routes du module Trips de l'API Sokhra",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Authentication",
+			"item": [
+				{
+					"name": "Request OTP",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has success field\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('success');",
+									"    pm.expect(jsonData.success).to.eql(true);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"phone\": \"+261341234567\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/request-otp",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "request-otp"]
+						},
+						"description": "Demande un code OTP pour authentification"
+					},
+					"response": []
+				},
+				{
+					"name": "Verify OTP",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has tokens\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.data).to.have.property('tokens');",
+									"});",
+									"",
+									"// Sauvegarder l'access_token automatiquement",
+									"if (pm.response.code === 200) {",
+									"    const jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.tokens) {",
+									"        pm.environment.set(\"access_token\", jsonData.data.tokens.accessToken);",
+									"        console.log(\"✅ Access token sauvegardé dans la variable access_token\");",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"phone\": \"+261341234567\",\n    \"code\": \"123456\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/verify-otp",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "verify-otp"]
+						},
+						"description": "Vérifie le code OTP et récupère les tokens JWT. L'access_token est automatiquement sauvegardé."
+					},
+					"response": []
+				}
+			],
+			"description": "Routes d'authentification nécessaires avant de tester les routes trips"
+		},
+		{
+			"name": "2. Trips - Create",
+			"item": [
+				{
+					"name": "Create Trip",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Response has trip data\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.data).to.have.property('trip');",
+									"    pm.expect(jsonData.data.trip.status).to.eql('pending');",
+									"});",
+									"",
+									"// Sauvegarder le trip_id automatiquement",
+									"if (pm.response.code === 201) {",
+									"    const jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.trip) {",
+									"        pm.environment.set(\"trip_id\", jsonData.data.trip.id);",
+									"        console.log(\"✅ Trip ID sauvegardé:\", jsonData.data.trip.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"from\": \"Casablanca, Maroc\",\n    \"to\": \"Rabat, Maroc\",\n    \"price\": 150.50,\n    \"currency\": \"MAD\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/trips",
+							"host": ["{{base_url}}"],
+							"path": ["trips"]
+						},
+						"description": "Crée un nouveau trajet avec prix. Le trip_id est automatiquement sauvegardé."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Trip - Without Price",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Trip created without price\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.data.trip.price).to.be.null;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"from\": \"Tanger, Maroc\",\n    \"to\": \"Fès, Maroc\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/trips",
+							"host": ["{{base_url}}"],
+							"path": ["trips"]
+						},
+						"description": "Crée un trajet sans prix (optionnel)"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Trip - Invalid (Missing Fields)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Error message indicates validation error\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(false);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"from\": \"Casablanca, Maroc\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/trips",
+							"host": ["{{base_url}}"],
+							"path": ["trips"]
+						},
+						"description": "Test de validation : crée un trajet sans le champ 'to' requis (doit retourner 400)"
+					},
+					"response": []
+				}
+			],
+			"description": "Routes pour créer des trajets"
+		},
+		{
+			"name": "3. Trips - List",
+			"item": [
+				{
+					"name": "Get All Trips",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has trips array\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.data).to.have.property('trips');",
+									"    pm.expect(jsonData.data.trips).to.be.an('array');",
+									"});",
+									"",
+									"pm.test(\"Response has pagination info\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.data).to.have.property('total');",
+									"    pm.expect(jsonData.data).to.have.property('page');",
+									"    pm.expect(jsonData.data).to.have.property('limit');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/trips",
+							"host": ["{{base_url}}"],
+							"path": ["trips"]
+						},
+						"description": "Récupère tous les trajets de l'utilisateur authentifié (avec pagination par défaut)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Trips - Paginated",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Limit is respected\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.data.limit).to.eql(5);",
+									"    pm.expect(jsonData.data.trips.length).to.be.at.most(5);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/trips?page=1&limit=5",
+							"host": ["{{base_url}}"],
+							"path": ["trips"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						},
+						"description": "Récupère les trajets avec pagination personnalisée (page 1, 5 résultats)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Trips - Filter by Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"All trips have pending status\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    jsonData.data.trips.forEach(function(trip) {",
+									"        pm.expect(trip.status).to.eql('pending');",
+									"    });",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/trips?status=pending&page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["trips"],
+							"query": [
+								{
+									"key": "status",
+									"value": "pending"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Filtre les trajets par statut 'pending'"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Trips - Invalid Pagination",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Error indicates validation error\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(false);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/trips?page=0&limit=0",
+							"host": ["{{base_url}}"],
+							"path": ["trips"],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "limit",
+									"value": "0"
+								}
+							]
+						},
+						"description": "Test de validation : pagination invalide (page=0, limit=0) doit retourner 400"
+					},
+					"response": []
+				}
+			],
+			"description": "Routes pour récupérer la liste des trajets"
+		},
+		{
+			"name": "4. Trips - Get Details",
+			"item": [
+				{
+					"name": "Get Trip by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has trip data\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.data).to.have.property('trip');",
+									"    pm.expect(jsonData.data.trip.id).to.eql(pm.environment.get('trip_id'));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/trips/{{trip_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["trips", "{{trip_id}}"]
+						},
+						"description": "Récupère les détails complets d'un trajet spécifique par son ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Trip - Not Found",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 404\", function () {",
+									"    pm.response.to.have.status(404);",
+									"});",
+									"",
+									"pm.test(\"Error message indicates not found\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(false);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/trips/00000000-0000-0000-0000-000000000000",
+							"host": ["{{base_url}}"],
+							"path": ["trips", "00000000-0000-0000-0000-000000000000"]
+						},
+						"description": "Test d'erreur : trajet inexistant doit retourner 404"
+					},
+					"response": []
+				}
+			],
+			"description": "Routes pour récupérer les détails d'un trajet spécifique"
+		},
+		{
+			"name": "5. Trips - Cancel",
+			"item": [
+				{
+					"name": "Cancel Trip",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Trip status is cancelled\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.data.trip.status).to.eql('cancelled');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/trips/{{trip_id}}/cancel",
+							"host": ["{{base_url}}"],
+							"path": ["trips", "{{trip_id}}", "cancel"]
+						},
+						"description": "Annule un trajet (met le statut à 'cancelled')"
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Trip - Already Cancelled",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Error indicates cannot cancel\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.eql(false);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/trips/{{trip_id}}/cancel",
+							"host": ["{{base_url}}"],
+							"path": ["trips", "{{trip_id}}", "cancel"]
+						},
+						"description": "Test de validation : annuler un trajet déjà annulé doit retourner 400"
+					},
+					"response": []
+				}
+			],
+			"description": "Routes pour annuler des trajets"
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "trip_id",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

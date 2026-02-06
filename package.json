@@ -8,6 +8,9 @@
     "build": "bash scripts/with-nvm.sh tsc",
     "start": "bash scripts/with-nvm.sh node dist/index.js",
     "type-check": "bash scripts/with-nvm.sh tsc --noEmit",
+    "test": "bash scripts/with-nvm.sh jest",
+    "test:watch": "bash scripts/with-nvm.sh jest --watch",
+    "test:coverage": "bash scripts/with-nvm.sh jest --coverage",
     "db:check": "bash scripts/with-nvm.sh ts-node scripts/check-db.ts",
     "db:init": "echo 'Pour initialiser la base de données, exécutez une des commandes suivantes:' && echo '' && echo 'Option 1 (recommandé):' && echo '  psql -U postgres -f scripts/init-db.sql' && echo '' && echo 'Option 2:' && echo '  cat scripts/init-db.sql | psql -U postgres' && echo '' && echo 'Option 3 (interactif):' && echo '  psql -U postgres' && echo '  puis copiez-collez le contenu de scripts/init-db.sql' && echo '' && echo 'Note: Vous devrez peut-être modifier les variables dans init-db.sql' && echo 'pour correspondre à votre fichier .env'"
   },
@@ -26,13 +29,20 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "@babel/core": "^7.23.7",
+    "@babel/preset-env": "^7.23.7",
+    "@jest/globals": "^29.7.0",
     "@types/bcrypt": "^5.0.2",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.11",
     "@types/jsonwebtoken": "^9.0.2",
     "@types/node": "^20.10.5",
     "@types/pg": "^8.10.9",
     "@types/uuid": "^9.0.8",
+    "babel-jest": "^29.7.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.3.3"
