@@ -1,0 +1,254 @@
+{
+  "info": {
+    "name": "Sokhra API",
+    "description": "Collection complète des routes du backend Sokhra (auth, users, trips, health). Utiliser l'environnement \"Sokhra Local\" avec baseUrl = http://localhost:3000/api/v1.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000/api/v1" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/health",
+            "description": "État du serveur et de la base de données."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST Request OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"{{phone}}\",\n  \"role\": \"seller\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/request-otp",
+            "description": "Demande un code OTP. Rôle : seller ou courier. Rate limit par téléphone."
+          }
+        },
+        {
+          "name": "POST Verify OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.data && json.data.tokens) {",
+                  "    pm.environment.set('accessToken', json.data.tokens.accessToken);",
+                  "    pm.environment.set('refreshToken', json.data.tokens.refreshToken);",
+                  "  }",
+                  "  if (json.data && json.data.user) {",
+                  "    pm.environment.set('userId', json.data.user.id);",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"{{phone}}\",\n  \"code\": \"{{otpCode}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/verify-otp",
+            "description": "Vérifie le code OTP et retourne user + tokens. Remplir otpCode (ex. depuis la base otp_codes) ou après request-otp en dev."
+          }
+        },
+        {
+          "name": "POST Refresh",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.data && json.data.accessToken) pm.environment.set('accessToken', json.data.accessToken);",
+                  "  if (json.data && json.data.refreshToken) pm.environment.set('refreshToken', json.data.refreshToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/refresh",
+            "description": "Rafraîchit les tokens (access + refresh). Body : refreshToken (UUID)."
+          }
+        },
+        {
+          "name": "GET Me (auth)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/auth/me",
+            "description": "Profil de l'utilisateur connecté (id, phone, role, onboarding_completed). Protégé JWT."
+          }
+        },
+        {
+          "name": "POST Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/auth/logout",
+            "description": "Révoque tous les refresh tokens de l'utilisateur. Protégé JWT."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "GET Me (users)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/users/me",
+            "description": "Même profil utilisateur via /users/me. Protégé JWT."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Trips",
+      "item": [
+        {
+          "name": "POST Create Trip",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.data && json.data.id) pm.environment.set('tripId', json.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from\": \"Antananarivo\",\n  \"to\": \"Toamasina\",\n  \"price\": 25000,\n  \"currency\": \"MGA\"\n}"
+            },
+            "url": "{{baseUrl}}/trips",
+            "description": "Crée un trajet (pending). from, to requis ; price/currency optionnels. Protégé JWT + rate limit."
+          }
+        },
+        {
+          "name": "GET List Trips",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/trips?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["trips"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "status", "value": "", "disabled": true }
+              ]
+            },
+            "description": "Liste paginée des trajets de l'utilisateur. Query : page, limit, status (optionnel). Protégé JWT."
+          }
+        },
+        {
+          "name": "GET Trip by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/trips/{{tripId}}",
+            "description": "Détail d'un trajet. Vérifie que l'utilisateur est propriétaire. Protégé JWT."
+          }
+        },
+        {
+          "name": "POST Cancel Trip",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/trips/{{tripId}}/cancel",
+            "description": "Annule un trajet (statut → cancelled). Rate limit 5/h. Protégé JWT."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Couriers",
+      "description": "Routes livreur : compte et règlement commission. GET account : livreur ou admin. POST settle : admin uniquement.",
+      "item": [
+        {
+          "name": "GET Courier Account",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/couriers/{{userId}}/account",
+            "description": "Compte livreur (commission, total_jobs, etc.). Livreur lui-même ou admin. Protégé JWT."
+          }
+        },
+        {
+          "name": "POST Settle Courier",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/couriers/{{userId}}/settle",
+            "description": "Règle la commission d'un livreur. Admin uniquement. Protégé JWT + authorizeAdmin."
+          }
+        }
+      ]
+    }
+  ]
+}

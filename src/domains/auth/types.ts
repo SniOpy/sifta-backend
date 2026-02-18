@@ -3,10 +3,11 @@
  */
 
 /**
- * Requête pour demander un code OTP
+ * Requête pour demander un code OTP (S05-BE-Correction: role obligatoire, stocké avec l'OTP).
  */
 export interface RequestOTPRequest {
   phone: string;
+  role: 'seller' | 'courier';
 }
 
 /**
@@ -18,7 +19,7 @@ export interface RequestOTPResponse {
 }
 
 /**
- * Requête pour vérifier un code OTP
+ * Requête pour vérifier un code OTP. Pas de role dans le body: on utilise celui stocké à request-otp.
  */
 export interface VerifyOTPRequest {
   phone: string;
@@ -36,12 +37,13 @@ export interface VerifyOTPResponse {
 }
 
 /**
- * Données utilisateur minimales retournées après vérification OTP
+ * Données utilisateur pour /me et verify-otp (S05-BE-Correction: role + onboarding_completed).
  */
 export interface UserMinimal {
   id: string;
   phone: string;
-  created_at: Date;
+  role: 'seller' | 'courier' | null;
+  onboarding_completed: boolean;
 }
 
 /**

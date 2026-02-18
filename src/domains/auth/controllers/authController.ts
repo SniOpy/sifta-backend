@@ -11,14 +11,9 @@ import { AuthErrorMessages } from '../constants/errorMessages';
  * @param req - Requête Express avec body.phone (déjà validé et normalisé)
  * @param res - Réponse Express
  */
-export async function requestOTP(
-  req: Request,
-  res: Response
-): Promise<void> {
-  const { phone } = req.body;
-
-  const result = await authService.requestOTPFlow(phone);
-
+export async function requestOTP(req: Request, res: Response): Promise<void> {
+  const { phone, role } = req.body;
+  const result = await authService.requestOTPFlow(phone, role);
   successResponse(res, { message: result.message }, result.message, 200);
 }
 
@@ -27,23 +22,10 @@ export async function requestOTP(
  * @param req - Requête Express avec body.phone et body.code (déjà validés et normalisés)
  * @param res - Réponse Express
  */
-export async function verifyOTPController(
-  req: Request,
-  res: Response
-): Promise<void> {
+export async function verifyOTPController(req: Request, res: Response): Promise<void> {
   const { phone, code } = req.body;
-
   const result = await authService.verifyOTPFlow(phone, code);
-
-  successResponse(
-    res,
-    {
-      user: result.user,
-      tokens: result.tokens,
-    },
-    'Code OTP vérifié avec succès',
-    200
-  );
+  successResponse(res, { user: result.user, tokens: result.tokens }, 'Code OTP vérifié avec succès', 200);
 }
 
 /**
@@ -71,29 +53,24 @@ export async function refreshTokenController(
 }
 
 /**
- * Contrôleur pour obtenir les informations de l'utilisateur authentifié
- * Route protégée nécessitant un token JWT valide
- * @param req - Requête Express avec req.user injecté par authenticateJWT
- * @param res - Réponse Express
+ * GET /me: charge l'utilisateur depuis la DB et retourne { id, phone, role, onboarding_completed } (S05-BE-Correction).
  */
-export async function getCurrentUser(
-  req: Request,
-  res: Response
-): Promise<void> {
-  // req.user est garanti d'exister grâce au middleware authenticateJWT
-  // TypeScript le reconnaît comme UserMinimal | undefined, mais on sait qu'il existe ici
-  if (!req.user) {
-    // Cette erreur ne devrait jamais se produire si le middleware fonctionne correctement
-    // mais on la gère pour la sécurité TypeScript
-    throw new UnauthorizedError(AuthErrorMessages.USER.NOT_AUTHENTICATED);
-  }
-
+export async function getCurrentUser(req: Request, res: Response): Promise<void> {
+  if (!req.user) throw new UnauthorizedError(AuthErrorMessages.USER.NOT_AUTHENTICATED);
+  const { getUserById } = await import('../../user/services/userService');
+  const user = await getUserById(req.user.id);
+  if (!user) throw new UnauthorizedError(AuthErrorMessages.USER.NOT_AUTHENTICATED);
   successResponse(
     res,
     {
-      user: req.user,
+      user: {
+        id: user.id,
+        phone: user.phone,
+        role: user.role,
+        onboarding_completed: user.onboarding_completed,
+      },
     },
-    'Informations utilisateur récupérées avec succès',
+    'OK',
     200
   );
 }

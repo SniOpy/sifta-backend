@@ -51,12 +51,12 @@ export async function authenticateJWT(
     throw new UnauthorizedError(AuthErrorMessages.TOKEN.INVALID_OR_EXPIRED);
   }
 
-  // 7. Créer UserMinimal depuis le payload JWT et l'injecter dans req.user
-  // Note: On utilise uniquement le payload JWT, pas de requête DB pour performance
+  // 7. UserMinimal depuis le payload (S05-BE-Correction: role pour requireRole)
   req.user = {
-    id: payload.sub, // Subject contient l'ID utilisateur
+    id: payload.sub,
     phone: payload.phone,
-    created_at: new Date(), // Le payload JWT ne contient pas created_at, on utilise une date par défaut
+    role: payload.role ?? null,
+    onboarding_completed: payload.onboarding_completed ?? false,
   };
 
   // 8. Continuer vers le prochain middleware/contrôleur

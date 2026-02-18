@@ -1,13 +1,13 @@
 /**
- * Types pour le domaine utilisateur
+ * Types pour le domaine utilisateur (S05-BE-Correction: role + onboarding_completed)
  */
+export type UserRole = 'seller' | 'courier';
 
-/**
- * Modèle User en base de données
- */
 export interface User {
   id: string;
   phone: string;
+  role: UserRole | null;
+  onboarding_completed: boolean;
   created_at: Date;
   updated_at: Date;
 }

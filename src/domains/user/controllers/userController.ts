@@ -30,18 +30,17 @@ export async function getCurrentUser(
     throw new NotFoundError(AuthErrorMessages.USER.NOT_FOUND);
   }
 
-  // Retourner les informations utilisateur complètes
   successResponse(
     res,
     {
       user: {
         id: user.id,
         phone: user.phone,
-        created_at: user.created_at,
-        updated_at: user.updated_at,
+        role: user.role,
+        onboarding_completed: user.onboarding_completed,
       },
     },
-    'Informations utilisateur récupérées avec succès',
+    'OK',
     200
   );
 }
