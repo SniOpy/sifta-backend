@@ -11,7 +11,8 @@
     "test": "bash scripts/with-nvm.sh jest",
     "test:watch": "bash scripts/with-nvm.sh jest --watch",
     "test:coverage": "bash scripts/with-nvm.sh jest --coverage",
-    "db:check": "bash scripts/with-nvm.sh ts-node scripts/check-db.ts",
+    "db:check": "ts-node scripts/check-db.ts",
+    "db:migrate": "ts-node scripts/run-migrations.ts",
     "db:init": "echo 'Pour initialiser la base de données, exécutez une des commandes suivantes:' && echo '' && echo 'Option 1 (recommandé):' && echo '  psql -U postgres -f scripts/init-db.sql' && echo '' && echo 'Option 2:' && echo '  cat scripts/init-db.sql | psql -U postgres' && echo '' && echo 'Option 3 (interactif):' && echo '  psql -U postgres' && echo '  puis copiez-collez le contenu de scripts/init-db.sql' && echo '' && echo 'Note: Vous devrez peut-être modifier les variables dans init-db.sql' && echo 'pour correspondre à votre fichier .env'"
   },
   "keywords": [],

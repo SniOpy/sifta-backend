@@ -3,13 +3,15 @@
  */
 
 /**
- * Payload JWT standardisé pour Access Token
+ * Payload JWT standardisé pour Access Token (S05-BE-Correction: role pour requireRole)
  */
 export interface JWTPayload {
-  sub: string; // Subject (user ID)
-  phone: string; // Numéro de téléphone
-  iat: number; // Issued at (timestamp)
-  exp: number; // Expiration (timestamp)
+  sub: string;
+  phone: string;
+  role?: 'seller' | 'courier' | null;
+  onboarding_completed?: boolean;
+  iat: number;
+  exp: number;
 }
 
 /**

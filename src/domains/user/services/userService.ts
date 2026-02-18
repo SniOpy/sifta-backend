@@ -1,27 +1,24 @@
-import { findUserByPhone, createUser, findUserById } from '../models/userModel';
-import { User } from '../types';
+import { findUserByPhone, createUser, findUserById, updateUserFromVerify } from '../models/userModel';
+import { User, UserRole } from '../types';
 
 /**
- * Trouve un utilisateur par son numéro de téléphone, ou le crée s'il n'existe pas
- * @param phone - Numéro de téléphone (déjà normalisé)
- * @returns L'utilisateur existant ou nouvellement créé
+ * Trouve ou crée l'utilisateur et applique le role de la session OTP (S05-BE-Correction).
+ * À verify-otp on ne fait pas confiance au body: role vient de l'OTP (serveur).
  */
-export async function findOrCreateUser(phone: string): Promise<User> {
-  // Essayer de trouver l'utilisateur existant
-  const existingUser = await findUserByPhone(phone);
-  if (existingUser) {
-    return existingUser;
+export async function findOrCreateUser(phone: string, sessionRole: UserRole): Promise<User> {
+  const existing = await findUserByPhone(phone);
+  if (existing) {
+    const updated = await updateUserFromVerify(existing.id, sessionRole, true);
+    return updated ?? existing;
   }
-
-  // Créer l'utilisateur s'il n'existe pas
   try {
-    return await createUser(phone);
+    return await createUser(phone, sessionRole, true);
   } catch (error: any) {
-    // Si erreur de contrainte unique (race condition), réessayer de trouver
     if (error.code === '23505') {
       const user = await findUserByPhone(phone);
       if (user) {
-        return user;
+        const updated = await updateUserFromVerify(user.id, sessionRole, true);
+        return updated ?? user;
       }
     }
     throw error;

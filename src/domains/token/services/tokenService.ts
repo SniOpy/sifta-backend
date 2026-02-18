@@ -75,8 +75,10 @@ export function generateAccessToken(user: User): string {
   ensureJWTSecret();
 
   const payload = {
-    sub: user.id, // Subject (user ID)
-    phone: user.phone, // Numéro de téléphone
+    sub: user.id,
+    phone: user.phone,
+    role: user.role ?? null,
+    onboarding_completed: user.onboarding_completed ?? false,
   };
 
   return jwt.sign(payload, JWT_SECRET!, {

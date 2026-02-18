@@ -1,0 +1,71 @@
+import pool from '../../../config/database';
+import { CourierAccount } from '../types';
+import { v4 as uuidv4 } from 'uuid';
+
+function mapRowToCourierAccount(row: any): CourierAccount {
+  return {
+    courier_id: row.courier_id,
+    total_jobs: parseInt(String(row.total_jobs), 10) || 0,
+    commission_due: parseFloat(String(row.commission_due)) || 0,
+    last_settlement_at: row.last_settlement_at ? new Date(row.last_settlement_at) : null,
+    is_blocked: Boolean(row.is_blocked),
+    created_at: new Date(row.created_at),
+    updated_at: new Date(row.updated_at),
+  };
+}
+
+/**
+ * Récupère le compte livreur par courier_id
+ */
+export async function findCourierAccountById(courierId: string): Promise<CourierAccount | null> {
+  const query = 'SELECT * FROM courier_account WHERE courier_id = $1';
+  const result = await pool.query(query, [courierId]);
+  if (result.rows.length === 0) return null;
+  return mapRowToCourierAccount(result.rows[0]);
+}
+
+/**
+ * Crée un compte livreur (ou retourne l'existant si présent)
+ */
+export async function findOrCreateCourierAccount(courierId: string): Promise<CourierAccount> {
+  const existing = await findCourierAccountById(courierId);
+  if (existing) return existing;
+  const query = `
+    INSERT INTO courier_account (courier_id, total_jobs, commission_due, last_settlement_at, is_blocked, created_at, updated_at)
+    VALUES ($1, 0, 0.00, NULL, false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    RETURNING *
+  `;
+  const result = await pool.query(query, [courierId]);
+  return mapRowToCourierAccount(result.rows[0]);
+}
+
+/**
+ * Remet commission_due à 0 et met à jour last_settlement_at
+ */
+export async function settleCourierAccount(courierId: string): Promise<CourierAccount | null> {
+  const query = `
+    UPDATE courier_account
+    SET commission_due = 0, last_settlement_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+    WHERE courier_id = $1
+    RETURNING *
+  `;
+  const result = await pool.query(query, [courierId]);
+  if (result.rows.length === 0) return null;
+  return mapRowToCourierAccount(result.rows[0]);
+}
+
+/**
+ * Enregistre un règlement dans commission_logs
+ */
+export async function insertCommissionLog(
+  courierId: string,
+  amountPaid: number,
+  adminId: string
+): Promise<void> {
+  const id = uuidv4();
+  const query = `
+    INSERT INTO commission_logs (id, courier_id, amount_paid, admin_id, settled_at, created_at)
+    VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  `;
+  await pool.query(query, [id, courierId, amountPaid, adminId]);
+}

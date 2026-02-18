@@ -1,0 +1,19 @@
+/**
+ * Messages d'erreur centralisés pour le domaine courier
+ */
+
+export const CourierErrorMessages = {
+  /**
+   * Messages d'erreur liés à l'autorisation
+   */
+  AUTH: {
+    NOT_ADMIN: 'Vous n\'êtes pas autorisé à effectuer cette action. Accès admin requis.',
+  },
+
+  /**
+   * Messages d'erreur liés à la validation
+   */
+  VALIDATION: {
+    COURIER_ID_INVALID: 'L\'identifiant du livreur doit être un UUID valide',
+  },
+};

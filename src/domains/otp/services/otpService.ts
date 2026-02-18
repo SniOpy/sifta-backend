@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
 import { createOTP, deleteOTPByPhone, deleteExpiredOTPs } from '../models/otpModel';
+import { OTPRole } from '../types';
 
 dotenv.config();
 
@@ -40,29 +41,18 @@ export async function verifyOTP(code: string, hash: string): Promise<boolean> {
 }
 
 /**
- * Crée un OTP pour un téléphone donné
- * Supprime d'abord tous les OTP actifs existants pour ce téléphone
+ * Crée un OTP pour un téléphone donné (S05-BE-Correction: role stocké avec l'OTP).
  * @param phone - Numéro de téléphone
+ * @param role - Role choisi à l'onboarding (seller | courier)
  * @returns Le code OTP en clair (pour envoi SMS)
  */
-export async function createOTPForPhone(phone: string): Promise<string> {
-  // Supprimer tous les OTP actifs existants pour ce téléphone
+export async function createOTPForPhone(phone: string, role: OTPRole): Promise<string> {
   await deleteOTPByPhone(phone);
-
-  // Générer un nouveau code OTP
   const code = generateOTP(OTP_LENGTH);
-
-  // Hash le code
   const codeHash = await hashOTP(code);
-
-  // Calculer la date d'expiration
   const expiresAt = new Date();
   expiresAt.setMinutes(expiresAt.getMinutes() + OTP_EXPIRES_IN_MINUTES);
-
-  // Stocker en base de données
-  await createOTP(phone, codeHash, expiresAt);
-
-  // Retourner le code en clair pour envoi SMS
+  await createOTP(phone, codeHash, expiresAt, role);
   return code;
 }
 

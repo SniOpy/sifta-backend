@@ -12,15 +12,10 @@
  * @returns Promise résolue (simule envoi asynchrone)
  */
 export async function sendOTP(phone: string, code: string): Promise<void> {
-  // Mock: Log le SMS qui serait envoyé
-  console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('[SMS MOCK] 📱 Envoi SMS');
-  console.log(`   Destinataire: ${phone}`);
-  console.log(`   Message: Votre code OTP Sokhra est ${code}`);
-  console.log(`   Code: ${code}`);
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-
-  // Simuler un délai d'envoi (optionnel)
+  // DEV ONLY : afficher le code en console si DEV_SHOW_OTP=true (pour tester sans vrai SMS)
+  if (process.env.DEV_SHOW_OTP === 'true') {
+    console.log(`[DEV] Code OTP pour ${phone} : ${code}`);
+  }
   await new Promise((resolve) => setTimeout(resolve, 100));
 
   // En production, remplacer par:

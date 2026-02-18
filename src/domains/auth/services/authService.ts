@@ -33,81 +33,44 @@ export interface VerifyOTPResult {
  */
 export class AuthService {
   /**
-   * Orchestre le flux de demande d'OTP
-   * @param phone - Numéro de téléphone (déjà validé et normalisé)
-   * @returns Résultat de la demande
+   * Demande d'OTP (S05-BE-Correction: role stocké avec l'OTP, source de vérité au verify).
    */
-  async requestOTPFlow(phone: string): Promise<RequestOTPResult> {
-    // Créer l'OTP pour ce téléphone
-    // Cette fonction supprime automatiquement les OTP actifs existants
-    const code = await createOTPForPhone(phone);
-
-    // Envoyer le SMS (mock pour l'instant)
+  async requestOTPFlow(phone: string, role: 'seller' | 'courier'): Promise<RequestOTPResult> {
+    const code = await createOTPForPhone(phone, role);
     await sendOTP(phone, code);
-
-    return {
-      success: true,
-      message: 'Code OTP envoyé avec succès',
-    };
+    return { success: true, message: 'Code OTP envoyé avec succès' };
   }
 
   /**
-   * Orchestre le flux de vérification d'OTP
-   * @param phone - Numéro de téléphone (déjà validé et normalisé)
-   * @param code - Code OTP à vérifier
-   * @returns Résultat avec utilisateur et tokens
-   * @throws NotFoundError si OTP non trouvé
-   * @throws ValidationError si OTP expiré ou code invalide
-   * @throws TooManyRequestsError si trop de tentatives
+   * Vérification OTP (S05-BE-Correction: role pris depuis la session OTP, jamais depuis le body).
    */
   async verifyOTPFlow(phone: string, code: string): Promise<VerifyOTPResult> {
-    // 1. Trouver l'OTP actif pour ce téléphone (vérifie déjà l'expiration)
     const otp = await findActiveOTP(phone);
-
-    // 2. Vérifier si l'OTP existe (findActiveOTP vérifie déjà l'expiration)
-    if (!otp) {
-      throw new NotFoundError(AuthErrorMessages.OTP.NOT_FOUND);
-    }
-
-    // 3. Vérifier si le nombre de tentatives a été dépassé
+    if (!otp) throw new NotFoundError(AuthErrorMessages.OTP.NOT_FOUND);
     if (otp.attempts >= MAX_OTP_ATTEMPTS) {
       throw new TooManyRequestsError(AuthErrorMessages.OTP.MAX_ATTEMPTS(MAX_OTP_ATTEMPTS));
     }
-
-    // 4. Incrémenter le compteur de tentatives
     const updatedOtp = await incrementAttempts(otp.id);
-    if (!updatedOtp) {
-      throw new InternalServerError(AuthErrorMessages.OTP.UPDATE_FAILED);
-    }
-
-    // 5. Vérifier le code OTP
+    if (!updatedOtp) throw new InternalServerError(AuthErrorMessages.OTP.UPDATE_FAILED);
     const isValid = await verifyOTP(code, otp.code_hash);
+    if (!isValid) throw new ValidationError(AuthErrorMessages.OTP.INVALID);
 
-    if (!isValid) {
-      // Code incorrect, mais on a déjà incrémenté les tentatives
-      throw new ValidationError(AuthErrorMessages.OTP.INVALID);
+    if (!otp.role || (otp.role !== 'seller' && otp.role !== 'courier')) {
+      throw new ValidationError('Session OTP invalide: rôle manquant. Refaites la demande OTP en choisissant un rôle.');
     }
 
-    // 6. Code correct : créer ou trouver l'utilisateur
-    const user = await findOrCreateUser(phone);
-
-    // 7. Générer les tokens JWT (Access Token + Refresh Token)
+    const user = await findOrCreateUser(phone, otp.role);
     const tokens = await generateTokens(user);
-
-    // 8. Supprimer l'OTP après succès
     await deleteOTPByPhone(phone);
 
-    // 9. Retourner résultat avec données utilisateur minimales et tokens
     return {
       user: {
         id: user.id,
         phone: user.phone,
-        created_at: user.created_at,
+        role: user.role,
+        onboarding_completed: user.onboarding_completed,
       },
-      tokens: {
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-      },
+      tokens: { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken },
     };
   }
 }

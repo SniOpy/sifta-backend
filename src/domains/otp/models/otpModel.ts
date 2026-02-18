@@ -1,26 +1,22 @@
 import pool from '../../../config/database';
-import { OTPCode } from '../types';
+import { OTPCode, OTPRole } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
- * Crée un nouveau code OTP en base de données
- * @param phone - Numéro de téléphone
- * @param codeHash - Hash bcrypt du code OTP
- * @param expiresAt - Date d'expiration
- * @returns L'OTP créé avec son ID
+ * Crée un nouveau code OTP en base de données (S05-BE-Correction: role stocké avec l'OTP).
  */
 export async function createOTP(
   phone: string,
   codeHash: string,
-  expiresAt: Date
+  expiresAt: Date,
+  role: OTPRole | null = null
 ): Promise<OTPCode> {
   const id = uuidv4();
   const query = `
-    INSERT INTO otp_codes (id, phone, code_hash, expires_at, attempts, created_at)
-    VALUES ($1, $2, $3, $4, $5, $6)
+    INSERT INTO otp_codes (id, phone, code_hash, expires_at, attempts, created_at, role)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
     RETURNING *
   `;
-
   const result = await pool.query(query, [
     id,
     phone,
@@ -28,16 +24,9 @@ export async function createOTP(
     expiresAt,
     0,
     new Date(),
+    role,
   ]);
-
-  return {
-    id: result.rows[0].id,
-    phone: result.rows[0].phone,
-    code_hash: result.rows[0].code_hash,
-    expires_at: new Date(result.rows[0].expires_at),
-    attempts: result.rows[0].attempts,
-    created_at: new Date(result.rows[0].created_at),
-  };
+  return mapRowToOTP(result.rows[0]);
 }
 
 /**
@@ -55,11 +44,11 @@ export async function findActiveOTP(phone: string): Promise<OTPCode | null> {
 
   const result = await pool.query(query, [phone]);
 
-  if (result.rows.length === 0) {
-    return null;
-  }
+  if (result.rows.length === 0) return null;
+  return mapRowToOTP(result.rows[0]);
+}
 
-  const row = result.rows[0];
+function mapRowToOTP(row: any): OTPCode {
   return {
     id: row.id,
     phone: row.phone,
@@ -67,6 +56,7 @@ export async function findActiveOTP(phone: string): Promise<OTPCode | null> {
     expires_at: new Date(row.expires_at),
     attempts: row.attempts,
     created_at: new Date(row.created_at),
+    role: row.role ?? null,
   };
 }
 
@@ -106,19 +96,8 @@ export async function incrementAttempts(otpId: string): Promise<OTPCode | null> 
 
   const result = await pool.query(query, [otpId]);
 
-  if (result.rows.length === 0) {
-    return null;
-  }
-
-  const row = result.rows[0];
-  return {
-    id: row.id,
-    phone: row.phone,
-    code_hash: row.code_hash,
-    expires_at: new Date(row.expires_at),
-    attempts: row.attempts,
-    created_at: new Date(row.created_at),
-  };
+  if (result.rows.length === 0) return null;
+  return mapRowToOTP(result.rows[0]);
 }
 
 /**
@@ -130,17 +109,6 @@ export async function findOTPById(id: string): Promise<OTPCode | null> {
   const query = 'SELECT * FROM otp_codes WHERE id = $1';
   const result = await pool.query(query, [id]);
 
-  if (result.rows.length === 0) {
-    return null;
-  }
-
-  const row = result.rows[0];
-  return {
-    id: row.id,
-    phone: row.phone,
-    code_hash: row.code_hash,
-    expires_at: new Date(row.expires_at),
-    attempts: row.attempts,
-    created_at: new Date(row.created_at),
-  };
+  if (result.rows.length === 0) return null;
+  return mapRowToOTP(result.rows[0]);
 }
