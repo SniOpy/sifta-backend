@@ -8,6 +8,7 @@ export interface User {
   phone: string;
   role: UserRole | null;
   onboarding_completed: boolean;
+  is_admin: boolean;
   created_at: Date;
   updated_at: Date;
 }

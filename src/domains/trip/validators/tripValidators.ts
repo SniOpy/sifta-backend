@@ -3,24 +3,55 @@ import { TRIP_STATUSES } from '../constants/tripStatus';
 import { TripErrorMessages } from '../constants/errorMessages';
 
 /**
- * Middleware de validation pour la création d'un trajet
+ * Valide une URL de lieu (http/https, max 500 caractères)
+ */
+const locationUrlChain = (field: 'pickup_location_url' | 'dropoff_location_url', required: boolean): ValidationChain[] => {
+  const chain = body(field)
+    .isString()
+    .withMessage(TripErrorMessages.VALIDATION.LOCATION_URL_INVALID)
+    .isLength({ min: 1, max: 500 })
+    .withMessage(TripErrorMessages.VALIDATION.LOCATION_URL_INVALID)
+    .matches(/^https?:\/\//i)
+    .withMessage(TripErrorMessages.VALIDATION.LOCATION_URL_INVALID)
+    .trim();
+  const c = required ? chain.notEmpty().withMessage(field === 'pickup_location_url' ? TripErrorMessages.VALIDATION.PICKUP_REQUIRED : TripErrorMessages.VALIDATION.DROPOFF_REQUIRED) : chain.optional();
+  return [c];
+};
+
+/**
+ * Middleware de validation pour la création d'un trajet/course.
+ * Accepte soit (from, to) soit (pickup_location_url, dropoff_location_url). customer_phone optionnel.
  */
 export const validateCreateTrip: ValidationChain[] = [
   body('from')
-    .notEmpty()
-    .withMessage(TripErrorMessages.VALIDATION.FROM_REQUIRED)
+    .optional()
     .isString()
     .withMessage(TripErrorMessages.VALIDATION.FROM_REQUIRED)
     .isLength({ min: 1, max: 255 })
     .withMessage(TripErrorMessages.VALIDATION.FROM_TOO_LONG)
     .trim(),
   body('to')
-    .notEmpty()
-    .withMessage(TripErrorMessages.VALIDATION.TO_REQUIRED)
+    .optional()
     .isString()
     .withMessage(TripErrorMessages.VALIDATION.TO_REQUIRED)
     .isLength({ min: 1, max: 255 })
     .withMessage(TripErrorMessages.VALIDATION.TO_TOO_LONG)
+    .trim(),
+  ...locationUrlChain('pickup_location_url', false),
+  ...locationUrlChain('dropoff_location_url', false),
+  body()
+    .custom((value, { req }) => {
+      const hasFromTo = req.body?.from && req.body?.to;
+      const hasPickupDropoff = req.body?.pickup_location_url && req.body?.dropoff_location_url;
+      if (hasFromTo || hasPickupDropoff) return true;
+      if (req.body?.pickup_location_url || req.body?.dropoff_location_url) {
+        throw new Error('pickup_location_url et dropoff_location_url doivent être fournis ensemble');
+      }
+      throw new Error('Fournissez soit (from, to) soit (pickup_location_url, dropoff_location_url)');
+    }),
+  body('customer_phone')
+    .optional({ values: 'falsy' })
+    .isString()
     .trim(),
   body('price')
     .optional()

@@ -44,3 +44,29 @@ export async function getCurrentUser(
     200
   );
 }
+
+/**
+ * GET /me (unifié): retourne id, phone, role, onboarding_completed, is_admin.
+ * Utilisé uniquement par la route GET /api/v1/me.
+ */
+export async function getMe(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new UnauthorizedError(AuthErrorMessages.USER.NOT_AUTHENTICATED);
+  }
+  const user = await getUserById(req.user.id);
+  if (!user) {
+    throw new UnauthorizedError(AuthErrorMessages.USER.NOT_AUTHENTICATED);
+  }
+  successResponse(
+    res,
+    {
+      id: user.id,
+      phone: user.phone,
+      role: user.role,
+      onboarding_completed: user.onboarding_completed,
+      is_admin: user.is_admin,
+    },
+    'OK',
+    200
+  );
+}

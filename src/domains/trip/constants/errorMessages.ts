@@ -36,5 +36,8 @@ export const TripErrorMessages = {
     PAGE_INVALID: 'Le numéro de page doit être supérieur ou égal à 1',
     LIMIT_INVALID: 'La limite doit être entre 1 et 100',
     STATUS_INVALID: 'Le statut fourni n\'est pas valide',
+    PICKUP_REQUIRED: 'L\'URL de lieu de prise en charge est requise',
+    DROPOFF_REQUIRED: 'L\'URL de lieu de livraison est requise',
+    LOCATION_URL_INVALID: 'L\'URL doit commencer par http ou https (max 500 caractères)',
   },
 };

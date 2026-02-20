@@ -24,7 +24,7 @@ export function errorHandler(
 
     errorResponse(
       res,
-      err.name,
+      err.name || 'AppError',
       err.message,
       err.statusCode,
       err instanceof Error && 'details' in err ? (err as any).details : undefined
@@ -44,7 +44,7 @@ export function errorHandler(
 
   errorResponse(
     res,
-    statusCode === 500 ? 'Erreur interne du serveur' : err.name || 'Error',
+    statusCode === 500 ? 'InternalServerError' : (err.name || 'Error'),
     statusCode === 500 ? 'Une erreur est survenue' : message,
     statusCode,
     process.env.NODE_ENV === 'development' ? { stack: err.stack } : undefined
@@ -61,7 +61,10 @@ export function notFoundHandler(
 ): void {
   res.status(404).json({
     success: false,
-    error: 'Route non trouvée',
-    message: `La route ${req.method} ${req.path} n'existe pas`,
+    data: null,
+    error: {
+      code: 'NotFound',
+      message: `La route ${req.method} ${req.path} n'existe pas`,
+    },
   });
 }

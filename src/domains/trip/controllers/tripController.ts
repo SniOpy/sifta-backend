@@ -20,9 +20,11 @@ export async function createTrip(
     throw new UnauthorizedError(AuthErrorMessages.USER.NOT_AUTHENTICATED);
   }
 
+  const fromLocation = req.body.pickup_location_url ?? req.body.from;
+  const toLocation = req.body.dropoff_location_url ?? req.body.to;
   const input: CreateTripInput = {
-    from: req.body.from,
-    to: req.body.to,
+    from: fromLocation,
+    to: toLocation,
     price: req.body.price,
     currency: req.body.currency,
   };
@@ -86,9 +88,10 @@ export async function getUserTrips(
 
   const result = await tripService.getUserTrips(req.user.id, filters);
 
+  // Exposer trips, courses et bookings pour compatibilité front (Mes courses, liste)
   successResponse(
     res,
-    result,
+    { ...result, courses: result.trips, bookings: result.trips },
     'Trajets récupérés avec succès',
     200
   );

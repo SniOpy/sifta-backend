@@ -69,3 +69,46 @@ export async function insertCommissionLog(
   `;
   await pool.query(query, [id, courierId, amountPaid, adminId]);
 }
+
+/**
+ * Règle la commission dans une transaction : SELECT FOR UPDATE → UPDATE → INSERT commission_logs.
+ * Retourne le compte mis à jour ou null si le compte n'existe pas.
+ */
+export async function settleCourierAccountInTransaction(
+  courierId: string,
+  adminId: string
+): Promise<CourierAccount | null> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const selectResult = await client.query(
+      'SELECT commission_due FROM courier_account WHERE courier_id = $1 FOR UPDATE',
+      [courierId]
+    );
+    if (selectResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+    const amountPaid = parseFloat(String(selectResult.rows[0].commission_due)) || 0;
+    const updateResult = await client.query(
+      `UPDATE courier_account
+       SET commission_due = 0, last_settlement_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+       WHERE courier_id = $1
+       RETURNING *`,
+      [courierId]
+    );
+    const logId = uuidv4();
+    await client.query(
+      `INSERT INTO commission_logs (id, courier_id, amount_paid, admin_id, settled_at, created_at)
+       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      [logId, courierId, amountPaid, adminId]
+    );
+    await client.query('COMMIT');
+    return mapRowToCourierAccount(updateResult.rows[0]);
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
+}

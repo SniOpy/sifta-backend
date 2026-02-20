@@ -17,39 +17,36 @@ export function successResponse<T>(
     success: true,
     message,
     data,
+    error: null,
   });
 }
 
 /**
- * Format de réponse API standardisé pour erreur
+ * Format de réponse API standardisé pour erreur (error: { code, message }).
  * @param res - Objet Response Express
- * @param error - Type d'erreur
+ * @param code - Code d'erreur (ex. ValidationError, ForbiddenError)
  * @param message - Message d'erreur
  * @param statusCode - Code HTTP (défaut: 500)
- * @param details - Détails supplémentaires (optionnel)
+ * @param details - Détails optionnels (ex. champs de validation)
  */
 export function errorResponse(
   res: Response,
-  error: string,
+  code: string,
   message: string,
   statusCode: number = 500,
   details?: Record<string, any>
 ): void {
   const response: any = {
     success: false,
-    error,
-    message,
+    data: null,
+    error: { code, message },
   };
-
   if (details) {
     response.details = details;
   }
-
-  // En développement, inclure plus de détails si disponibles
   if (process.env.NODE_ENV === 'development' && details?.stack) {
     response.stack = details.stack;
   }
-
   res.status(statusCode).json(response);
 }
 
@@ -62,5 +59,5 @@ export function validationErrorResponse(
   res: Response,
   errors: Record<string, string>
 ): void {
-  errorResponse(res, 'Validation error', 'Erreurs de validation', 400, errors);
+  errorResponse(res, 'ValidationError', 'Erreurs de validation', 400, errors);
 }

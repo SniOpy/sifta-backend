@@ -23,17 +23,48 @@ export async function getCourierAccount(
   }
 
   const courierId = req.params.id;
-  const userId = req.user.id;
-
-  // Vérifier que l'utilisateur est le livreur lui-même ou un admin
-  // Pour l'instant, on permet à n'importe quel utilisateur authentifié de voir n'importe quel compte
-  // (on peut ajouter une vérification admin plus tard si nécessaire)
+  const canAccess = courierId === req.user!.id || req.user!.is_admin;
+  if (!canAccess) {
+    throw new ForbiddenError(CourierErrorMessages.AUTH.NOT_OWNER_OR_ADMIN);
+  }
   const account = await courierAccountService.getCourierAccount(courierId);
 
   successResponse(
     res,
     { account: serializeCourierAccount(account) },
     'Compte livreur récupéré avec succès',
+    200
+  );
+}
+
+/**
+ * GET /couriers/me/account — le livreur récupère son propre compte (requireRole('courier')).
+ */
+export async function getMyCourierAccount(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new UnauthorizedError(AuthErrorMessages.USER.NOT_AUTHENTICATED);
+  }
+  const account = await courierAccountService.getCourierAccount(req.user.id);
+  successResponse(
+    res,
+    { account: serializeCourierAccount(account) },
+    'Compte livreur récupéré avec succès',
+    200
+  );
+}
+
+/**
+ * POST /couriers/me/settle — admin règle son propre compte courier (requireAdmin).
+ */
+export async function settleMyCourierAccount(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new UnauthorizedError(AuthErrorMessages.USER.NOT_AUTHENTICATED);
+  }
+  const account = await courierAccountService.settleCommission(req.user.id, req.user.id);
+  successResponse(
+    res,
+    { account: serializeCourierAccount(account) },
+    'Commission réglée avec succès. Le compte livreur a été mis à jour.',
     200
   );
 }

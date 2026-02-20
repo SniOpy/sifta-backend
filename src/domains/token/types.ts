@@ -10,6 +10,7 @@ export interface JWTPayload {
   phone: string;
   role?: 'seller' | 'courier' | null;
   onboarding_completed?: boolean;
+  is_admin?: boolean;
   iat: number;
   exp: number;
 }

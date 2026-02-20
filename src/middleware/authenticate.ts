@@ -26,39 +26,29 @@ export async function authenticateJWT(
   res: Response,
   next: NextFunction
 ): Promise<void> {
-  // 1. Extraire le header Authorization
-  const authHeader = req.headers.authorization;
-
-  // 2. Vérifier la présence du header
-  if (!authHeader) {
-    throw new UnauthorizedError(AuthErrorMessages.TOKEN.REQUIRED);
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return next(new UnauthorizedError(AuthErrorMessages.TOKEN.REQUIRED));
+    }
+    const parts = authHeader.split(' ');
+    if (parts.length !== 2 || parts[0] !== 'Bearer') {
+      return next(new UnauthorizedError(AuthErrorMessages.TOKEN.INVALID_FORMAT));
+    }
+    const token = parts[1];
+    const payload = verifyAccessToken(token);
+    if (!payload) {
+      return next(new UnauthorizedError(AuthErrorMessages.TOKEN.INVALID_OR_EXPIRED));
+    }
+    req.user = {
+      id: payload.sub,
+      phone: payload.phone,
+      role: payload.role ?? null,
+      onboarding_completed: payload.onboarding_completed ?? false,
+      is_admin: payload.is_admin ?? false,
+    };
+    next();
+  } catch (err) {
+    next(err);
   }
-
-  // 3. Vérifier le format "Bearer <token>"
-  const parts = authHeader.split(' ');
-  if (parts.length !== 2 || parts[0] !== 'Bearer') {
-    throw new UnauthorizedError(AuthErrorMessages.TOKEN.INVALID_FORMAT);
-  }
-
-  // 4. Extraire le token
-  const token = parts[1];
-
-  // 5. Vérifier et décoder le token JWT
-  const payload = verifyAccessToken(token);
-
-  // 6. Si le token est invalide ou expiré
-  if (!payload) {
-    throw new UnauthorizedError(AuthErrorMessages.TOKEN.INVALID_OR_EXPIRED);
-  }
-
-  // 7. UserMinimal depuis le payload (S05-BE-Correction: role pour requireRole)
-  req.user = {
-    id: payload.sub,
-    phone: payload.phone,
-    role: payload.role ?? null,
-    onboarding_completed: payload.onboarding_completed ?? false,
-  };
-
-  // 8. Continuer vers le prochain middleware/contrôleur
-  next();
 }

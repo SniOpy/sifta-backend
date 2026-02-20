@@ -8,6 +8,7 @@ function mapRowToUser(row: any): User {
     phone: row.phone,
     role: row.role ?? (row.account_type ?? null),
     onboarding_completed: row.onboarding_completed ?? false,
+    is_admin: row.is_admin ?? false,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
   };
@@ -23,8 +24,8 @@ export async function createUser(
 ): Promise<User> {
   const id = uuidv4();
   const query = `
-    INSERT INTO users (id, phone, role, onboarding_completed, created_at, updated_at)
-    VALUES ($1, $2, $3, $4, $5, $6)
+    INSERT INTO users (id, phone, role, onboarding_completed, is_admin, created_at, updated_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
     RETURNING *
   `;
   const result = await pool.query(query, [
@@ -32,6 +33,7 @@ export async function createUser(
     phone,
     role,
     onboardingCompleted,
+    false,
     new Date(),
     new Date(),
   ]);

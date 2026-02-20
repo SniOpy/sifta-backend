@@ -1,54 +1,52 @@
 import { Router } from 'express';
 import {
   getCourierAccount,
+  getMyCourierAccount,
   settleCourierAccount,
+  settleMyCourierAccount,
 } from './controllers/courierController';
-import {
-  validateCourierId,
-} from './validators/courierValidators';
+import { validateCourierId } from './validators/courierValidators';
 import { checkValidationErrors } from '../../middleware/validate';
 import { asyncHandler } from '../../shared/utils/asyncHandler';
 import { authenticateJWT } from '../../middleware/authenticate';
-import { authorizeAdmin } from '../../middleware/authorizeAdmin';
+import { requireRole } from '../../middleware/requireRole';
+import { requireAdmin } from '../../middleware/authorizeAdmin';
 
 const router = Router();
 
-/**
- * Route GET /couriers/:id/account
- * Récupère le compte d'un livreur (commission, total_jobs, etc.)
- * Accessible par le livreur lui-même ou un admin
- * 
- * Middleware appliqué dans l'ordre:
- * 1. Authentification JWT (vérifie le token et injecte req.user)
- * 2. Validation de l'ID du livreur (paramètre URL)
- * 3. Contrôleur (récupération du compte)
- */
+/** GET /couriers/me/account — livreur uniquement (ses propres infos). */
 router.get(
-  '/:id/account',
-  authenticateJWT, // Authentification JWT en premier
-  validateCourierId, // Validation de l'ID (paramètre URL)
-  checkValidationErrors, // Vérification des erreurs de validation
-  asyncHandler(getCourierAccount) // Contrôleur avec gestion automatique des erreurs
+  '/me/account',
+  authenticateJWT,
+  requireRole('courier'),
+  asyncHandler(getMyCourierAccount)
 );
 
-/**
- * Route POST /couriers/:id/settle
- * Règle la commission d'un livreur (admin only)
- * Remet commission_due à 0 et met à jour last_settlement_at
- * 
- * Middleware appliqué dans l'ordre:
- * 1. Authentification JWT (vérifie le token et injecte req.user)
- * 2. Autorisation admin (vérifie que l'utilisateur est admin)
- * 3. Validation de l'ID du livreur (paramètre URL)
- * 4. Contrôleur (règlement de la commission)
- */
+/** POST /couriers/me/settle — admin uniquement (règle son propre compte courier). */
+router.post(
+  '/me/settle',
+  authenticateJWT,
+  requireAdmin,
+  asyncHandler(settleMyCourierAccount)
+);
+
+/** GET /couriers/:id/account — livreur lui-même ou admin. */
+router.get(
+  '/:id/account',
+  authenticateJWT,
+  validateCourierId,
+  checkValidationErrors,
+  asyncHandler(getCourierAccount)
+);
+
+/** POST /couriers/:id/settle — admin only. */
 router.post(
   '/:id/settle',
-  authenticateJWT, // Authentification JWT en premier
-  authorizeAdmin, // Vérification des droits admin
-  validateCourierId, // Validation de l'ID (paramètre URL)
-  checkValidationErrors, // Vérification des erreurs de validation
-  asyncHandler(settleCourierAccount) // Contrôleur avec gestion automatique des erreurs
+  authenticateJWT,
+  requireAdmin,
+  validateCourierId,
+  checkValidationErrors,
+  asyncHandler(settleCourierAccount)
 );
 
 export default router;

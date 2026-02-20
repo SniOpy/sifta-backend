@@ -8,6 +8,7 @@ export const CourierErrorMessages = {
    */
   AUTH: {
     NOT_ADMIN: 'Vous n\'êtes pas autorisé à effectuer cette action. Accès admin requis.',
+    NOT_OWNER_OR_ADMIN: 'Accès refusé. Réservé au livreur concerné ou à un admin.',
   },
 
   /**

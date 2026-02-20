@@ -1,10 +1,8 @@
 import { NotFoundError } from '../../../shared/errors/appError';
 import { CourseErrorMessages } from '../constants/errorMessages';
 import {
-  findCourierAccountById,
   findOrCreateCourierAccount,
-  settleCourierAccount as settleAccountInDb,
-  insertCommissionLog,
+  settleCourierAccountInTransaction,
 } from '../models/courierAccountModel';
 import { CourierAccount } from '../types';
 
@@ -12,23 +10,19 @@ import { CourierAccount } from '../types';
  * Récupère le compte d'un livreur (crée le compte si inexistant)
  */
 export async function getCourierAccount(courierId: string): Promise<CourierAccount> {
-  const account = await findOrCreateCourierAccount(courierId);
-  return account;
+  return findOrCreateCourierAccount(courierId);
 }
 
 /**
- * Règle la commission d'un livreur : remet commission_due à 0, enregistre dans commission_logs
+ * Règle la commission d'un livreur (transactionnel : read → update → insert commission_logs).
+ * Crée le compte s'il n'existe pas avant la transaction.
  */
 export async function settleCommission(courierId: string, adminId: string): Promise<CourierAccount> {
-  const existing = await findCourierAccountById(courierId);
-  const account = existing ?? (await findOrCreateCourierAccount(courierId));
-  const amountPaid = Number(account.commission_due) || 0;
-
-  const updated = await settleAccountInDb(courierId);
+  await findOrCreateCourierAccount(courierId);
+  const updated = await settleCourierAccountInTransaction(courierId, adminId);
   if (!updated) {
     throw new NotFoundError(CourseErrorMessages.ACCOUNT.NOT_FOUND);
   }
-  await insertCommissionLog(courierId, amountPaid, adminId);
   return updated;
 }
 

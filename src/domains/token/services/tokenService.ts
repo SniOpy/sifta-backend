@@ -79,6 +79,7 @@ export function generateAccessToken(user: User): string {
     phone: user.phone,
     role: user.role ?? null,
     onboarding_completed: user.onboarding_completed ?? false,
+    is_admin: user.is_admin ?? false,
   };
 
   return jwt.sign(payload, JWT_SECRET!, {

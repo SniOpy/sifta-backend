@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { requestOTP, verifyOTPController, refreshTokenController, getCurrentUser, logoutController } from './controllers/authController';
+import { requestOTP, verifyOTPController, refreshTokenController, logoutController } from './controllers/authController';
+import { getMe } from '../user/controllers/userController';
 import { otpRateLimit } from '../../middleware/rateLimit';
 import { validateRequestOTP, validateVerifyOTP, validateRefreshToken } from './validators/authValidators';
 import { checkValidationErrors } from '../../middleware/validate';
@@ -7,6 +8,9 @@ import { asyncHandler } from '../../shared/utils/asyncHandler';
 import { authenticateJWT } from '../../middleware/authenticate';
 
 const router = Router();
+
+/** GET /auth/me — alias vers GET /me (compat front). Préférer GET /api/v1/me. */
+router.get('/me', authenticateJWT, asyncHandler(getMe));
 
 /**
  * Route POST /request-otp
@@ -57,21 +61,6 @@ router.post(
   validateRefreshToken, // Validation
   checkValidationErrors, // Vérification des erreurs de validation
   asyncHandler(refreshTokenController) // Contrôleur avec gestion automatique des erreurs
-);
-
-/**
- * Route GET /me
- * Route protégée nécessitant une authentification JWT
- * Retourne les informations de l'utilisateur authentifié
- * 
- * Middleware appliqué dans l'ordre:
- * 1. Authentification JWT (vérifie le token et injecte req.user)
- * 2. Contrôleur (retourne les informations utilisateur)
- */
-router.get(
-  '/me',
-  authenticateJWT, // Authentification JWT en premier
-  asyncHandler(getCurrentUser) // Contrôleur avec gestion automatique des erreurs
 );
 
 /**
