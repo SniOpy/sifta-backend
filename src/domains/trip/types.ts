@@ -63,3 +63,18 @@ export interface PaginatedTripsResult {
   page: number;
   limit: number;
 }
+
+/**
+ * DTO de détail trip pour le vendeur (GET /seller/trips/:id)
+ */
+export interface SellerTripDetailResponse {
+  id: string;
+  status: TripStatus;
+  courier_id: string | null;
+  pickup_url: string;
+  dropoff_url: string;
+  customer_phone: string | null;
+  amount_total: number | null;
+  delivery_fee: number | null;
+  created_at: Date;
+}
