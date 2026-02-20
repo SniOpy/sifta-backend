@@ -14,6 +14,7 @@ import {
 import { NotFoundError, ForbiddenError, ValidationError } from '../../../shared/errors/appError';
 import { TripErrorMessages } from '../constants/errorMessages';
 import { canTransition } from '../constants/tripStatus';
+import { parseLatLngFromUrl } from '../../../shared/utils/geo';
 
 /**
  * Service métier pour la gestion des trajets
@@ -26,12 +27,17 @@ export class TripService {
    * @returns Le trajet créé avec statut 'pending'
    */
   async createTrip(userId: string, input: CreateTripInput): Promise<Trip> {
+    const pickupLatLng = parseLatLngFromUrl(input.from) ?? null;
+    const dropoffLatLng = parseLatLngFromUrl(input.to) ?? null;
+
     const trip = await createTripModel(
       userId,
       input.from,
       input.to,
       input.price ?? null,
-      input.currency ?? 'MAD'
+      input.currency ?? 'MAD',
+      pickupLatLng,
+      dropoffLatLng
     );
 
     return trip;

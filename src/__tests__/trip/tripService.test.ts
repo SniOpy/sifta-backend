@@ -47,6 +47,10 @@ describe('TripService', () => {
         payment_status: 'pending' as const,
         created_at: new Date(),
         updated_at: new Date(),
+        pickup_lat: null,
+        pickup_lng: null,
+        dropoff_lat: null,
+        dropoff_lng: null,
       };
 
       mockCreateTrip.mockResolvedValue(mockTrip);
@@ -59,7 +63,9 @@ describe('TripService', () => {
         input.from,
         input.to,
         input.price,
-        input.currency
+        input.currency,
+        null,
+        null
       );
     });
 
@@ -80,6 +86,10 @@ describe('TripService', () => {
         payment_status: 'pending' as const,
         created_at: new Date(),
         updated_at: new Date(),
+        pickup_lat: null,
+        pickup_lng: null,
+        dropoff_lat: null,
+        dropoff_lng: null,
       };
 
       mockCreateTrip.mockResolvedValue(mockTrip);
@@ -92,7 +102,9 @@ describe('TripService', () => {
         input.from,
         input.to,
         null,
-        'MAD'
+        'MAD',
+        null,
+        null
       );
     });
   });
@@ -111,6 +123,10 @@ describe('TripService', () => {
         payment_status: 'pending' as const,
         created_at: new Date(),
         updated_at: new Date(),
+        pickup_lat: null,
+        pickup_lng: null,
+        dropoff_lat: null,
+        dropoff_lng: null,
       };
 
       mockFindTripById.mockResolvedValue(mockTrip);
@@ -142,6 +158,10 @@ describe('TripService', () => {
         payment_status: 'pending' as const,
         created_at: new Date(),
         updated_at: new Date(),
+        pickup_lat: null,
+        pickup_lng: null,
+        dropoff_lat: null,
+        dropoff_lng: null,
       };
 
       mockFindTripById.mockResolvedValue(mockTrip);
@@ -166,6 +186,10 @@ describe('TripService', () => {
         payment_status: 'pending' as const,
         created_at: new Date(),
         updated_at: new Date(),
+        pickup_lat: null,
+        pickup_lng: null,
+        dropoff_lat: null,
+        dropoff_lng: null,
       };
 
       const updatedTrip = {
@@ -195,6 +219,10 @@ describe('TripService', () => {
         payment_status: 'pending' as const,
         created_at: new Date(),
         updated_at: new Date(),
+        pickup_lat: null,
+        pickup_lng: null,
+        dropoff_lat: null,
+        dropoff_lng: null,
       };
 
       mockFindTripById.mockResolvedValue(mockTrip);
@@ -217,6 +245,10 @@ describe('TripService', () => {
         payment_status: 'paid' as const,
         created_at: new Date(),
         updated_at: new Date(),
+        pickup_lat: null,
+        pickup_lng: null,
+        dropoff_lat: null,
+        dropoff_lng: null,
       };
 
       mockFindTripById.mockResolvedValue(mockTrip);
@@ -239,6 +271,10 @@ describe('TripService', () => {
         payment_status: 'pending' as const,
         created_at: new Date(),
         updated_at: new Date(),
+        pickup_lat: null,
+        pickup_lng: null,
+        dropoff_lat: null,
+        dropoff_lng: null,
       };
 
       mockFindTripById.mockResolvedValue(mockTrip);
@@ -263,6 +299,10 @@ describe('TripService', () => {
         payment_status: 'pending' as const,
         created_at: new Date(),
         updated_at: new Date(),
+        pickup_lat: null,
+        pickup_lng: null,
+        dropoff_lat: null,
+        dropoff_lng: null,
       };
 
       const cancelledTrip = {
@@ -292,6 +332,10 @@ describe('TripService', () => {
         payment_status: 'paid' as const,
         created_at: new Date(),
         updated_at: new Date(),
+        pickup_lat: null,
+        pickup_lng: null,
+        dropoff_lat: null,
+        dropoff_lng: null,
       };
 
       mockFindTripById.mockResolvedValue(mockTrip);
@@ -314,6 +358,10 @@ describe('TripService', () => {
         payment_status: 'pending' as const,
         created_at: new Date(),
         updated_at: new Date(),
+        pickup_lat: null,
+        pickup_lng: null,
+        dropoff_lat: null,
+        dropoff_lng: null,
       };
 
       mockFindTripById.mockResolvedValue(mockTrip);

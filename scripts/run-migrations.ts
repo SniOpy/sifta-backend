@@ -37,6 +37,7 @@ const MIGRATION_FILES = [
   '017_otp_codes_add_role.sql',
   '018_users_add_role_onboarding.sql',
   '019_users_add_is_admin.sql',
+  '020_trips_add_pickup_dropoff_lat_lng.sql',
 ];
 
 const MIGRATIONS_DIR = path.join(__dirname, 'migrations');

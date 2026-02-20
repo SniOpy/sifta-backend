@@ -26,6 +26,11 @@ export interface Trip {
   payment_status: PaymentStatus;
   created_at: Date;
   updated_at: Date;
+  /** S06-FS-T03: coordonnées extraites d'URL (pickup = from_location) */
+  pickup_lat: number | null;
+  pickup_lng: number | null;
+  dropoff_lat: number | null;
+  dropoff_lng: number | null;
 }
 
 /**
@@ -77,4 +82,9 @@ export interface SellerTripDetailResponse {
   amount_total: number | null;
   delivery_fee: number | null;
   created_at: Date;
+  /** S06-FS-T03: présents si extraction depuis URL réussie */
+  pickup_lat: number | null;
+  pickup_lng: number | null;
+  dropoff_lat: number | null;
+  dropoff_lng: number | null;
 }

@@ -15,6 +15,10 @@ function mapTripToSellerDetail(trip: {
   to_location: string;
   price: number | null;
   created_at: Date;
+  pickup_lat?: number | null;
+  pickup_lng?: number | null;
+  dropoff_lat?: number | null;
+  dropoff_lng?: number | null;
 }): SellerTripDetailResponse {
   return {
     id: trip.id,
@@ -26,6 +30,10 @@ function mapTripToSellerDetail(trip: {
     amount_total: trip.price,
     delivery_fee: null,
     created_at: trip.created_at,
+    pickup_lat: trip.pickup_lat ?? null,
+    pickup_lng: trip.pickup_lng ?? null,
+    dropoff_lat: trip.dropoff_lat ?? null,
+    dropoff_lng: trip.dropoff_lng ?? null,
   };
 }
 

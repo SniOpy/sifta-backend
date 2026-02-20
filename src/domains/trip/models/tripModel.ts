@@ -5,10 +5,12 @@ import { v4 as uuidv4 } from 'uuid';
 /**
  * Crée un nouveau trajet en base de données
  * @param userId - ID de l'utilisateur propriétaire
- * @param fromLocation - Adresse de départ
- * @param toLocation - Adresse d'arrivée
+ * @param fromLocation - Adresse de départ (URL ou texte)
+ * @param toLocation - Adresse d'arrivée (URL ou texte)
  * @param price - Prix du trajet (optionnel)
  * @param currency - Devise (optionnel, défaut: MAD)
+ * @param pickupLatLng - Coordonnées pickup si extraites (S06-FS-T03)
+ * @param dropoffLatLng - Coordonnées dropoff si extraites
  * @returns Le trajet créé
  */
 export async function createTrip(
@@ -16,12 +18,14 @@ export async function createTrip(
   fromLocation: string,
   toLocation: string,
   price?: number | null,
-  currency: string = 'MAD'
+  currency: string = 'MAD',
+  pickupLatLng?: { lat: number; lng: number } | null,
+  dropoffLatLng?: { lat: number; lng: number } | null
 ): Promise<Trip> {
   const id = uuidv4();
   const query = `
-    INSERT INTO trips (id, user_id, from_location, to_location, status, price, currency, payment_status)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    INSERT INTO trips (id, user_id, from_location, to_location, status, price, currency, payment_status, pickup_lat, pickup_lng, dropoff_lat, dropoff_lng)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
     RETURNING *
   `;
 
@@ -30,10 +34,14 @@ export async function createTrip(
     userId,
     fromLocation,
     toLocation,
-    'pending', // Statut par défaut
+    'pending',
     price ?? null,
     currency,
-    'pending', // Payment status par défaut
+    'pending',
+    pickupLatLng?.lat ?? null,
+    pickupLatLng?.lng ?? null,
+    dropoffLatLng?.lat ?? null,
+    dropoffLatLng?.lng ?? null,
   ]);
 
   const row = result.rows[0];
@@ -208,6 +216,7 @@ export async function deleteTrip(id: string): Promise<void> {
  * @returns Objet Trip
  */
 function mapRowToTrip(row: any): Trip {
+  const num = (v: any) => (v != null && v !== '' ? parseFloat(v) : null);
   return {
     id: row.id,
     user_id: row.user_id,
@@ -219,5 +228,9 @@ function mapRowToTrip(row: any): Trip {
     payment_status: row.payment_status,
     created_at: new Date(row.created_at),
     updated_at: new Date(row.updated_at),
+    pickup_lat: num(row.pickup_lat),
+    pickup_lng: num(row.pickup_lng),
+    dropoff_lat: num(row.dropoff_lat),
+    dropoff_lng: num(row.dropoff_lng),
   };
 }
