@@ -224,7 +224,8 @@ export async function findTripsAvailableInBoundingBox(
 }
 
 /**
- * Claim une course par un livreur : status -> accepted, courier_id = courierId.
+ * Claim une course par un livreur : atomique "first accept wins".
+ * UPDATE uniquement si status = pending ET courier_id IS NULL.
  * Retourne le trip mis à jour ou null si déjà pris / inexistant.
  */
 export async function claimTripById(
@@ -233,8 +234,8 @@ export async function claimTripById(
 ): Promise<Trip | null> {
   const query = `
     UPDATE trips
-    SET status = 'accepted', courier_id = $1, updated_at = CURRENT_TIMESTAMP
-    WHERE id = $2 AND status = 'pending'
+    SET status = 'accepted', courier_id = $1, assigned_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+    WHERE id = $2 AND status = 'pending' AND courier_id IS NULL
     RETURNING *
   `;
   const result = await pool.query(query, [courierId, tripId]);
@@ -274,5 +275,6 @@ function mapRowToTrip(row: any): Trip {
     dropoff_lat: num(row.dropoff_lat),
     dropoff_lng: num(row.dropoff_lng),
     courier_id: row.courier_id ?? null,
+    assigned_at: row.assigned_at != null ? new Date(row.assigned_at) : null,
   };
 }

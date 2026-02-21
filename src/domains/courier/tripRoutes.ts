@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   getAvailableTrips,
   claimTrip,
+  getCourierTripById,
 } from './controllers/availableTripsController';
 import { validateAvailableTripsQuery } from './validators/availableTripsValidators';
 import { validateTripId } from '../trip/validators/tripValidators';
@@ -23,6 +24,18 @@ router.get(
   validateAvailableTripsQuery,
   checkValidationErrors,
   asyncHandler(getAvailableTrips)
+);
+
+/**
+ * GET /courier/trips/:id — Détail mission assignée (livreur propriétaire ou admin).
+ */
+router.get(
+  '/trips/:id',
+  authenticateJWT,
+  requireRole('courier'),
+  validateTripId,
+  checkValidationErrors,
+  asyncHandler(getCourierTripById)
 );
 
 /**
