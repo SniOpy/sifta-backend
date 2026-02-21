@@ -31,6 +31,8 @@ export interface Trip {
   pickup_lng: number | null;
   dropoff_lat: number | null;
   dropoff_lng: number | null;
+  /** Livreur ayant accepté la course (null si pending) */
+  courier_id: string | null;
 }
 
 /**
@@ -83,6 +85,23 @@ export interface SellerTripDetailResponse {
   delivery_fee: number | null;
   created_at: Date;
   /** S06-FS-T03: présents si extraction depuis URL réussie */
+  pickup_lat: number | null;
+  pickup_lng: number | null;
+  dropoff_lat: number | null;
+  dropoff_lng: number | null;
+}
+
+/**
+ * DTO course disponible pour le livreur (GET /courier/trips/available) — S06-FS-T04
+ */
+export interface CourierAvailableTripResponse {
+  id: string;
+  pickup_location_url: string;
+  dropoff_location_url: string;
+  distance_km_estimated: number;
+  eta_minutes_estimated: number;
+  amount_total: number;
+  delivery_fee: number;
   pickup_lat: number | null;
   pickup_lng: number | null;
   dropoff_lat: number | null;

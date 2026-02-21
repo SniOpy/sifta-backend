@@ -4,6 +4,7 @@ import userRoutes from '../domains/user/routes';
 import tripRoutes from '../domains/trip/routes';
 import sellerTripRoutes from '../domains/trip/sellerRoutes';
 import courierRoutes from '../domains/courier/routes';
+import courierTripRoutes from '../domains/courier/tripRoutes';
 import healthRoutes from './health';
 import { getMe } from '../domains/user/controllers/userController';
 import { authenticateJWT } from '../middleware/authenticate';
@@ -37,5 +38,8 @@ router.use('/seller/trips', sellerTripRoutes);
 
 // Routes livreurs (compte, settle)
 router.use('/couriers', courierRoutes);
+
+// Feed livreur : courses disponibles (rayon 3 km)
+router.use('/courier', courierTripRoutes);
 
 export default router;

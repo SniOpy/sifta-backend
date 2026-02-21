@@ -202,6 +202,47 @@ export async function updateTrip(
 }
 
 /**
+ * Trouve les trajets disponibles (status pending) avec coords pickup dans une bbox.
+ * S06-FS-T04: feed livreur available trips (filtre haversine 3 km fait côté service).
+ */
+export async function findTripsAvailableInBoundingBox(
+  minLat: number,
+  maxLat: number,
+  minLng: number,
+  maxLng: number
+): Promise<Trip[]> {
+  const query = `
+    SELECT * FROM trips
+    WHERE status = 'pending'
+      AND pickup_lat IS NOT NULL AND pickup_lng IS NOT NULL
+      AND pickup_lat BETWEEN $1 AND $2
+      AND pickup_lng BETWEEN $3 AND $4
+    ORDER BY created_at DESC
+  `;
+  const result = await pool.query(query, [minLat, maxLat, minLng, maxLng]);
+  return result.rows.map(mapRowToTrip);
+}
+
+/**
+ * Claim une course par un livreur : status -> accepted, courier_id = courierId.
+ * Retourne le trip mis à jour ou null si déjà pris / inexistant.
+ */
+export async function claimTripById(
+  tripId: string,
+  courierId: string
+): Promise<Trip | null> {
+  const query = `
+    UPDATE trips
+    SET status = 'accepted', courier_id = $1, updated_at = CURRENT_TIMESTAMP
+    WHERE id = $2 AND status = 'pending'
+    RETURNING *
+  `;
+  const result = await pool.query(query, [courierId, tripId]);
+  if (result.rows.length === 0) return null;
+  return mapRowToTrip(result.rows[0]);
+}
+
+/**
  * Supprime un trajet (principalement pour les tests)
  * @param id - ID du trajet
  */
@@ -232,5 +273,6 @@ function mapRowToTrip(row: any): Trip {
     pickup_lng: num(row.pickup_lng),
     dropoff_lat: num(row.dropoff_lat),
     dropoff_lng: num(row.dropoff_lng),
+    courier_id: row.courier_id ?? null,
   };
 }

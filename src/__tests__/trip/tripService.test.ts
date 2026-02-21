@@ -51,6 +51,7 @@ describe('TripService', () => {
         pickup_lng: null,
         dropoff_lat: null,
         dropoff_lng: null,
+        courier_id: null,
       };
 
       mockCreateTrip.mockResolvedValue(mockTrip);
@@ -90,6 +91,7 @@ describe('TripService', () => {
         pickup_lng: null,
         dropoff_lat: null,
         dropoff_lng: null,
+        courier_id: null,
       };
 
       mockCreateTrip.mockResolvedValue(mockTrip);
@@ -127,6 +129,7 @@ describe('TripService', () => {
         pickup_lng: null,
         dropoff_lat: null,
         dropoff_lng: null,
+        courier_id: null,
       };
 
       mockFindTripById.mockResolvedValue(mockTrip);
@@ -162,6 +165,7 @@ describe('TripService', () => {
         pickup_lng: null,
         dropoff_lat: null,
         dropoff_lng: null,
+        courier_id: null,
       };
 
       mockFindTripById.mockResolvedValue(mockTrip);
@@ -190,6 +194,7 @@ describe('TripService', () => {
         pickup_lng: null,
         dropoff_lat: null,
         dropoff_lng: null,
+        courier_id: null,
       };
 
       const updatedTrip = {
@@ -223,6 +228,7 @@ describe('TripService', () => {
         pickup_lng: null,
         dropoff_lat: null,
         dropoff_lng: null,
+        courier_id: null,
       };
 
       mockFindTripById.mockResolvedValue(mockTrip);
@@ -249,6 +255,7 @@ describe('TripService', () => {
         pickup_lng: null,
         dropoff_lat: null,
         dropoff_lng: null,
+        courier_id: null,
       };
 
       mockFindTripById.mockResolvedValue(mockTrip);
@@ -275,6 +282,7 @@ describe('TripService', () => {
         pickup_lng: null,
         dropoff_lat: null,
         dropoff_lng: null,
+        courier_id: null,
       };
 
       mockFindTripById.mockResolvedValue(mockTrip);
@@ -303,6 +311,7 @@ describe('TripService', () => {
         pickup_lng: null,
         dropoff_lat: null,
         dropoff_lng: null,
+        courier_id: null,
       };
 
       const cancelledTrip = {
@@ -336,6 +345,7 @@ describe('TripService', () => {
         pickup_lng: null,
         dropoff_lat: null,
         dropoff_lng: null,
+        courier_id: null,
       };
 
       mockFindTripById.mockResolvedValue(mockTrip);
@@ -362,6 +372,7 @@ describe('TripService', () => {
         pickup_lng: null,
         dropoff_lat: null,
         dropoff_lng: null,
+        courier_id: null,
       };
 
       mockFindTripById.mockResolvedValue(mockTrip);

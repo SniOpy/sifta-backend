@@ -16,5 +16,9 @@ export const CourierErrorMessages = {
    */
   VALIDATION: {
     COURIER_ID_INVALID: 'L\'identifiant du livreur doit être un UUID valide',
+    LAT_REQUIRED: 'La latitude (lat) est requise',
+    LNG_REQUIRED: 'La longitude (lng) est requise',
+    LAT_INVALID: 'La latitude doit être un nombre entre -90 et 90',
+    LNG_INVALID: 'La longitude doit être un nombre entre -180 et 180',
   },
 };
