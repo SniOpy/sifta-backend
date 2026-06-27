@@ -3,37 +3,42 @@ import { tripService } from '../services/tripService';
 import { successResponse } from '../../../shared/responses/apiResponse';
 import { UnauthorizedError } from '../../../shared/errors/appError';
 import { AuthErrorMessages } from '../../auth/constants/errorMessages';
-import type { SellerTripDetailResponse } from '../types';
+import type { SellerTripDetailResponse, Trip } from '../types';
 
 /**
  * Mappe le modèle Trip vers le DTO vendeur (GET /seller/trips/:id).
  */
-function mapTripToSellerDetail(trip: {
-  id: string;
-  status: string;
-  from_location: string;
-  to_location: string;
-  price: number | null;
-  created_at: Date;
-  pickup_lat?: number | null;
-  pickup_lng?: number | null;
-  dropoff_lat?: number | null;
-  dropoff_lng?: number | null;
-}): SellerTripDetailResponse {
+function mapTripToSellerDetail(trip: Trip): SellerTripDetailResponse {
+  const orderAmount = trip.price;
+  const deliveryFee = trip.delivery_fee;
+  const commission = trip.sokhra_commission;
+  const clientTotal =
+    orderAmount != null && deliveryFee != null
+      ? orderAmount + deliveryFee + (commission ?? 0)
+      : null;
+
   return {
     id: trip.id,
     status: trip.status as SellerTripDetailResponse['status'],
-    courier_id: null,
+    courier_id: trip.courier_id ?? null,
     pickup_url: trip.from_location,
     dropoff_url: trip.to_location,
-    customer_phone: null,
-    amount_total: trip.price,
-    delivery_fee: null,
+    customer_phone: trip.customer_phone ?? null,
+    order_amount: orderAmount,
+    amount_total: orderAmount,
+    delivery_fee: deliveryFee,
+    commission,
+    client_total: clientTotal,
     created_at: trip.created_at,
     pickup_lat: trip.pickup_lat ?? null,
     pickup_lng: trip.pickup_lng ?? null,
     dropoff_lat: trip.dropoff_lat ?? null,
     dropoff_lng: trip.dropoff_lng ?? null,
+    courier_lat: trip.courier_lat ?? null,
+    courier_lng: trip.courier_lng ?? null,
+    courier_location_at: trip.courier_location_at ?? null,
+    picked_up_at: trip.picked_up_at ?? null,
+    delivered_at: trip.delivered_at ?? null,
   };
 }
 

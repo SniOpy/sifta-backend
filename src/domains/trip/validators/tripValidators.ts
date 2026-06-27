@@ -53,22 +53,19 @@ export const validateCreateTrip: ValidationChain[] = [
     .optional({ values: 'falsy' })
     .isString()
     .trim(),
+  body('city')
+    .optional({ values: 'falsy' })
+    .isString()
+    .withMessage(TripErrorMessages.VALIDATION.CITY_REQUIRED)
+    .isLength({ min: 1, max: 100 })
+    .withMessage(TripErrorMessages.VALIDATION.CITY_REQUIRED)
+    .trim(),
   body('price')
-    .optional()
-    .isFloat({ min: 0, max: 999999.99 })
+    .notEmpty()
+    .withMessage(TripErrorMessages.VALIDATION.PRICE_REQUIRED)
+    .bail()
+    .isFloat({ min: 0.01, max: 999999.99 })
     .withMessage(TripErrorMessages.VALIDATION.PRICE_INVALID)
-    .custom((value) => {
-      if (value !== undefined && value !== null) {
-        if (typeof value !== 'number' && typeof value !== 'string') {
-          throw new Error(TripErrorMessages.VALIDATION.PRICE_INVALID);
-        }
-        const numValue = typeof value === 'string' ? parseFloat(value) : value;
-        if (isNaN(numValue) || numValue < 0 || numValue > 999999.99) {
-          throw new Error(TripErrorMessages.VALIDATION.PRICE_INVALID);
-        }
-      }
-      return true;
-    })
     .toFloat(),
   body('currency')
     .optional()

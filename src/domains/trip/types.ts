@@ -35,6 +35,23 @@ export interface Trip {
   courier_id: string | null;
   /** S06-FS-T05: date/heure du claim (acceptation par le livreur) */
   assigned_at: Date | null;
+  /** Ville de la course (phase test: Tanger) */
+  city: string | null;
+  /** Téléphone du client destinataire */
+  customer_phone: string | null;
+  /** Frais de livraison F (revenu livreur), figés à la création */
+  delivery_fee: number | null;
+  /** Commission Sokhra C (10% de F), ajoutée au total client */
+  sokhra_commission: number | null;
+  /** Jalons du flux */
+  picked_up_at: Date | null;
+  delivered_at: Date | null;
+  /** Encaissement confirmé chez le client */
+  cash_collected: boolean;
+  /** Dernière position GPS connue du livreur (suivi live) */
+  courier_lat: number | null;
+  courier_lng: number | null;
+  courier_location_at: Date | null;
 }
 
 /**
@@ -43,8 +60,11 @@ export interface Trip {
 export interface CreateTripInput {
   from: string;
   to: string;
-  price?: number;
+  /** Montant produit M (obligatoire), à récupérer chez le client */
+  price: number;
   currency?: string;
+  city?: string;
+  customer_phone?: string;
 }
 
 /**
@@ -83,14 +103,26 @@ export interface SellerTripDetailResponse {
   pickup_url: string;
   dropoff_url: string;
   customer_phone: string | null;
+  /** Montant produit M (récupéré chez le client, avancé au vendeur) */
+  order_amount: number | null;
+  /** @deprecated alias de order_amount conservé pour compatibilité */
   amount_total: number | null;
   delivery_fee: number | null;
+  commission: number | null;
+  /** Total payé par le client (M + F + C) */
+  client_total: number | null;
   created_at: Date;
   /** S06-FS-T03: présents si extraction depuis URL réussie */
   pickup_lat: number | null;
   pickup_lng: number | null;
   dropoff_lat: number | null;
   dropoff_lng: number | null;
+  /** Suivi live du livreur */
+  courier_lat: number | null;
+  courier_lng: number | null;
+  courier_location_at: Date | null;
+  picked_up_at: Date | null;
+  delivered_at: Date | null;
 }
 
 /**
@@ -102,8 +134,14 @@ export interface CourierAvailableTripResponse {
   dropoff_location_url: string;
   distance_km_estimated: number;
   eta_minutes_estimated: number;
+  /** Montant produit M à récupérer chez le client */
+  order_amount: number;
+  /** @deprecated alias historique (= total client) */
   amount_total: number;
   delivery_fee: number;
+  commission: number;
+  /** Total à encaisser chez le client (M + F + C) */
+  client_total: number;
   pickup_lat: number | null;
   pickup_lng: number | null;
   dropoff_lat: number | null;
@@ -119,11 +157,19 @@ export interface CourierTripDetailResponse {
   pickup_url: string;
   dropoff_url: string;
   customer_phone: string | null;
+  /** Montant produit M à récupérer chez le client */
+  order_amount: number;
+  /** @deprecated alias historique (= total client) */
   amount_total: number;
   delivery_fee: number;
+  commission: number;
+  /** Total à encaisser chez le client (M + F + C) */
+  client_total: number;
   created_at: Date;
   pickup_lat: number | null;
   pickup_lng: number | null;
   dropoff_lat: number | null;
   dropoff_lng: number | null;
+  picked_up_at: Date | null;
+  delivered_at: Date | null;
 }

@@ -55,6 +55,27 @@ export async function settleCourierAccount(courierId: string): Promise<CourierAc
 }
 
 /**
+ * Crédite la commission due d'un livreur à la livraison d'une course.
+ * Crée le compte si besoin, puis incrémente commission_due et total_jobs (atomique).
+ */
+export async function incrementCommissionDue(
+  courierId: string,
+  amount: number
+): Promise<CourierAccount> {
+  await findOrCreateCourierAccount(courierId);
+  const query = `
+    UPDATE courier_account
+    SET commission_due = commission_due + $2,
+        total_jobs = total_jobs + 1,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE courier_id = $1
+    RETURNING *
+  `;
+  const result = await pool.query(query, [courierId, amount]);
+  return mapRowToCourierAccount(result.rows[0]);
+}
+
+/**
  * Enregistre un règlement dans commission_logs
  */
 export async function insertCommissionLog(

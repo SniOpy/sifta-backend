@@ -14,11 +14,42 @@ const LNG_MIN = -180;
 const LNG_MAX = 180;
 
 /**
+ * Patterns d'extraction de coordonnées (lat,lng) depuis une URL.
+ * Chaque regex doit capturer lat en groupe 1 et lng en groupe 2.
+ * Ordre = priorité d'essai.
+ */
+const LAT = '(-?\\d{1,3}(?:\\.\\d+)?)';
+const LNG = '(-?\\d{1,3}(?:\\.\\d+)?)';
+const COORD_PATTERNS: RegExp[] = [
+  // @lat,lng ou @lat,lng,zoom (Google Maps)
+  new RegExp(`@${LAT},${LNG}(?:[,/]|$)`),
+  // !3dlat!4dlng (URLs Google "place")
+  new RegExp(`!3d${LAT}!4d${LNG}`),
+  // q=loc:lat,lng (WhatsApp "envoyer ma position")
+  new RegExp(`[?&]q=loc:${LAT},${LNG}(?:[,&]|$)`, 'i'),
+  // query=lat,lng (Google Maps api=1)
+  new RegExp(`[?&]query=${LAT},${LNG}(?:[,&]|$)`, 'i'),
+  // ll=lat,lng (Apple/Google variantes)
+  new RegExp(`[?&]ll=${LAT},${LNG}(?:[,&]|$)`, 'i'),
+  // q=lat,lng ou q=lat,lng,zoom
+  new RegExp(`[?&]q=${LAT}[, ]${LNG}(?:[,&]|$)`, 'i'),
+  // q=lat+lng (plus au lieu de virgule)
+  new RegExp(`[?&]q=${LAT}\\+${LNG}(?:&|$)`, 'i'),
+];
+
+/**
  * Extrait latitude et longitude depuis une URL type Google Maps / WhatsApp.
  * Formats supportés :
  * - ...@lat,lng (ex: https://www.google.com/maps/@33.5731,-7.5898,17z)
- * - ?q=lat,lng ou &q=lat,lng (ex: https://www.google.com/maps?q=33.5731,-7.5898)
- * - ?q=lat+lng (plus au lieu de virgule)
+ * - ...!3dlat!4dlng (ex: https://www.google.com/maps/place/.../@.../data=...!3d35.76!4d-5.83)
+ * - ?q=lat,lng / &q=lat,lng / ?q=lat+lng (ex: https://www.google.com/maps?q=33.5731,-7.5898)
+ * - ?q=loc:lat,lng (lien de localisation WhatsApp)
+ * - ?query=lat,lng (Google Maps api=1)
+ * - ?ll=lat,lng
+ *
+ * Note : les liens raccourcis (ex: https://maps.app.goo.gl/xxxx) ne contiennent pas
+ * de coordonnées et renvoient null — il faut les ouvrir pour obtenir un lien complet.
+ *
  * @param url - URL ou chaîne contenant potentiellement des coords
  * @returns { lat, lng } ou null si non trouvé / invalide
  */
@@ -29,28 +60,13 @@ export function parseLatLngFromUrl(url: string | null | undefined): LatLng | nul
 
   const s = url.trim();
 
-  // @lat,lng ou @lat,lng,zoom
-  const atMatch = s.match(/@(-?\d{1,3}(?:\.\d+)?),(-?\d{1,3}(?:\.\d+)?)(?:[,/]|$)/);
-  if (atMatch) {
-    const lat = parseFloat(atMatch[1]);
-    const lng = parseFloat(atMatch[2]);
-    if (isValidLatLng(lat, lng)) return { lat, lng };
-  }
-
-  // q=lat,lng ou q=lat,lng,zoom
-  const qMatch = s.match(/[?&]q=(-?\d{1,3}(?:\.\d+)?)[,+ ](-?\d{1,3}(?:\.\d+)?)(?:[,&]|$)/);
-  if (qMatch) {
-    const lat = parseFloat(qMatch[1]);
-    const lng = parseFloat(qMatch[2]);
-    if (isValidLatLng(lat, lng)) return { lat, lng };
-  }
-
-  // q=lat+lng (plus)
-  const qPlusMatch = s.match(/[?&]q=(-?\d{1,3}(?:\.\d+)?)\+(-?\d{1,3}(?:\.\d+)?)(?:&|$)/);
-  if (qPlusMatch) {
-    const lat = parseFloat(qPlusMatch[1]);
-    const lng = parseFloat(qPlusMatch[2]);
-    if (isValidLatLng(lat, lng)) return { lat, lng };
+  for (const pattern of COORD_PATTERNS) {
+    const match = s.match(pattern);
+    if (match) {
+      const lat = parseFloat(match[1]);
+      const lng = parseFloat(match[2]);
+      if (isValidLatLng(lat, lng)) return { lat, lng };
+    }
   }
 
   return null;

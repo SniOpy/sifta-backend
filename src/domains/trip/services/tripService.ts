@@ -14,7 +14,9 @@ import {
 import { NotFoundError, ForbiddenError, ValidationError } from '../../../shared/errors/appError';
 import { TripErrorMessages } from '../constants/errorMessages';
 import { canTransition } from '../constants/tripStatus';
-import { parseLatLngFromUrl } from '../../../shared/utils/geo';
+import { parseLatLngFromUrl, haversineKm } from '../../../shared/utils/geo';
+import { isActiveCity } from '../../../shared/constants/serviceCities';
+import { computeDeliveryPricing } from '../../../shared/pricing/deliveryPricing';
 
 /**
  * Service métier pour la gestion des trajets
@@ -27,17 +29,47 @@ export class TripService {
    * @returns Le trajet créé avec statut 'pending'
    */
   async createTrip(userId: string, input: CreateTripInput): Promise<Trip> {
-    const pickupLatLng = parseLatLngFromUrl(input.from) ?? null;
-    const dropoffLatLng = parseLatLngFromUrl(input.to) ?? null;
+    // Ville requise et desservie (phase test: Tanger uniquement)
+    if (!input.city || input.city.trim() === '') {
+      throw new ValidationError(TripErrorMessages.VALIDATION.CITY_REQUIRED);
+    }
+    if (!isActiveCity(input.city)) {
+      throw new ValidationError(TripErrorMessages.VALIDATION.CITY_NOT_SERVED(input.city));
+    }
+
+    // Montant produit M obligatoire (à récupérer chez le client)
+    if (input.price == null || !(input.price > 0)) {
+      throw new ValidationError(TripErrorMessages.VALIDATION.PRICE_REQUIRED);
+    }
+
+    // Cause racine du bug "la course ne se déclenche pas" : sans coordonnées
+    // extractibles, la course reste invisible du feed livreur. On exige donc
+    // des liens contenant des coordonnées GPS.
+    const pickupLatLng = parseLatLngFromUrl(input.from);
+    if (!pickupLatLng) {
+      throw new ValidationError(TripErrorMessages.VALIDATION.PICKUP_COORDS_REQUIRED);
+    }
+    const dropoffLatLng = parseLatLngFromUrl(input.to);
+    if (!dropoffLatLng) {
+      throw new ValidationError(TripErrorMessages.VALIDATION.DROPOFF_COORDS_REQUIRED);
+    }
+
+    // Frais de livraison + commission figés à la création (distance pickup->dropoff)
+    const distanceKm = haversineKm(pickupLatLng, dropoffLatLng);
+    const pricing = computeDeliveryPricing(distanceKm, input.price);
 
     const trip = await createTripModel(
       userId,
       input.from,
       input.to,
-      input.price ?? null,
+      input.price,
       input.currency ?? 'MAD',
       pickupLatLng,
-      dropoffLatLng
+      dropoffLatLng,
+      input.city.trim(),
+      input.customer_phone ?? null,
+      pricing.deliveryFee,
+      pricing.commission
     );
 
     return trip;

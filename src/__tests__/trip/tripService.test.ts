@@ -28,12 +28,19 @@ describe('TripService', () => {
   });
 
   describe('createTrip', () => {
+    const pickupUrl = 'https://www.google.com/maps?q=35.7595,-5.8340';
+    const dropoffUrl = 'https://www.google.com/maps?q=35.7700,-5.8000';
+    const pickupCoords = { lat: 35.7595, lng: -5.834 };
+    const dropoffCoords = { lat: 35.77, lng: -5.8 };
+
     it('devrait créer un trajet avec les données fournies', async () => {
       const input = {
-        from: 'Casablanca, Maroc',
-        to: 'Rabat, Maroc',
+        from: pickupUrl,
+        to: dropoffUrl,
         price: 150.50,
         currency: 'MAD',
+        city: 'Tanger',
+        customer_phone: '+212600000000',
       };
 
       const mockTrip = {
@@ -47,11 +54,22 @@ describe('TripService', () => {
         payment_status: 'pending' as const,
         created_at: new Date(),
         updated_at: new Date(),
-        pickup_lat: null,
-        pickup_lng: null,
-        dropoff_lat: null,
-        dropoff_lng: null,
+        pickup_lat: pickupCoords.lat,
+        pickup_lng: pickupCoords.lng,
+        dropoff_lat: dropoffCoords.lat,
+        dropoff_lng: dropoffCoords.lng,
         courier_id: null,
+        assigned_at: null,
+        city: 'Tanger',
+        customer_phone: '+212600000000',
+        delivery_fee: 20,
+        sokhra_commission: 2,
+        picked_up_at: null,
+        delivered_at: null,
+        cash_collected: false,
+        courier_lat: null,
+        courier_lng: null,
+        courier_location_at: null,
       };
 
       mockCreateTrip.mockResolvedValue(mockTrip);
@@ -65,49 +83,38 @@ describe('TripService', () => {
         input.to,
         input.price,
         input.currency,
-        null,
-        null
+        pickupCoords,
+        dropoffCoords,
+        'Tanger',
+        '+212600000000',
+        expect.any(Number),
+        expect.any(Number)
       );
     });
 
-    it('devrait créer un trajet sans prix si non fourni', async () => {
-      const input = {
-        from: 'Tanger, Maroc',
-        to: 'Fès, Maroc',
-      };
+    it('devrait rejeter une création sans montant (prix requis)', async () => {
+      await expect(
+        tripService.createTrip(testUserId, {
+          from: pickupUrl,
+          to: dropoffUrl,
+          city: 'Tanger',
+        } as never)
+      ).rejects.toThrow(ValidationError);
+      expect(mockCreateTrip).not.toHaveBeenCalled();
+    });
 
-      const mockTrip = {
-        id: 'trip-id',
-        user_id: testUserId,
-        from_location: input.from,
-        to_location: input.to,
-        status: 'pending' as TripStatus,
-        price: null,
-        currency: 'MAD',
-        payment_status: 'pending' as const,
-        created_at: new Date(),
-        updated_at: new Date(),
-        pickup_lat: null,
-        pickup_lng: null,
-        dropoff_lat: null,
-        dropoff_lng: null,
-        courier_id: null,
-      };
+    it('devrait rejeter une ville non desservie', async () => {
+      await expect(
+        tripService.createTrip(testUserId, { from: pickupUrl, to: dropoffUrl, city: 'Casablanca', price: 100 })
+      ).rejects.toThrow(ValidationError);
+      expect(mockCreateTrip).not.toHaveBeenCalled();
+    });
 
-      mockCreateTrip.mockResolvedValue(mockTrip);
-
-      const result = await tripService.createTrip(testUserId, input);
-
-      expect(result.price).toBeNull();
-      expect(mockCreateTrip).toHaveBeenCalledWith(
-        testUserId,
-        input.from,
-        input.to,
-        null,
-        'MAD',
-        null,
-        null
-      );
+    it('devrait rejeter un lien de prise en charge sans coordonnées', async () => {
+      await expect(
+        tripService.createTrip(testUserId, { from: 'https://maps.app.goo.gl/abc', to: dropoffUrl, city: 'Tanger', price: 100 })
+      ).rejects.toThrow(ValidationError);
+      expect(mockCreateTrip).not.toHaveBeenCalled();
     });
   });
 
@@ -130,6 +137,17 @@ describe('TripService', () => {
         dropoff_lat: null,
         dropoff_lng: null,
         courier_id: null,
+        assigned_at: null,
+        city: null,
+        customer_phone: null,
+        delivery_fee: null,
+        sokhra_commission: null,
+        picked_up_at: null,
+        delivered_at: null,
+        cash_collected: false,
+        courier_lat: null,
+        courier_lng: null,
+        courier_location_at: null,
       };
 
       mockFindTripById.mockResolvedValue(mockTrip);
@@ -166,6 +184,17 @@ describe('TripService', () => {
         dropoff_lat: null,
         dropoff_lng: null,
         courier_id: null,
+        assigned_at: null,
+        city: null,
+        customer_phone: null,
+        delivery_fee: null,
+        sokhra_commission: null,
+        picked_up_at: null,
+        delivered_at: null,
+        cash_collected: false,
+        courier_lat: null,
+        courier_lng: null,
+        courier_location_at: null,
       };
 
       mockFindTripById.mockResolvedValue(mockTrip);
@@ -195,6 +224,17 @@ describe('TripService', () => {
         dropoff_lat: null,
         dropoff_lng: null,
         courier_id: null,
+        assigned_at: null,
+        city: null,
+        customer_phone: null,
+        delivery_fee: null,
+        sokhra_commission: null,
+        picked_up_at: null,
+        delivered_at: null,
+        cash_collected: false,
+        courier_lat: null,
+        courier_lng: null,
+        courier_location_at: null,
       };
 
       const updatedTrip = {
@@ -229,6 +269,17 @@ describe('TripService', () => {
         dropoff_lat: null,
         dropoff_lng: null,
         courier_id: null,
+        assigned_at: null,
+        city: null,
+        customer_phone: null,
+        delivery_fee: null,
+        sokhra_commission: null,
+        picked_up_at: null,
+        delivered_at: null,
+        cash_collected: false,
+        courier_lat: null,
+        courier_lng: null,
+        courier_location_at: null,
       };
 
       mockFindTripById.mockResolvedValue(mockTrip);
@@ -256,6 +307,17 @@ describe('TripService', () => {
         dropoff_lat: null,
         dropoff_lng: null,
         courier_id: null,
+        assigned_at: null,
+        city: null,
+        customer_phone: null,
+        delivery_fee: null,
+        sokhra_commission: null,
+        picked_up_at: null,
+        delivered_at: null,
+        cash_collected: false,
+        courier_lat: null,
+        courier_lng: null,
+        courier_location_at: null,
       };
 
       mockFindTripById.mockResolvedValue(mockTrip);
@@ -283,6 +345,17 @@ describe('TripService', () => {
         dropoff_lat: null,
         dropoff_lng: null,
         courier_id: null,
+        assigned_at: null,
+        city: null,
+        customer_phone: null,
+        delivery_fee: null,
+        sokhra_commission: null,
+        picked_up_at: null,
+        delivered_at: null,
+        cash_collected: false,
+        courier_lat: null,
+        courier_lng: null,
+        courier_location_at: null,
       };
 
       mockFindTripById.mockResolvedValue(mockTrip);
@@ -312,6 +385,17 @@ describe('TripService', () => {
         dropoff_lat: null,
         dropoff_lng: null,
         courier_id: null,
+        assigned_at: null,
+        city: null,
+        customer_phone: null,
+        delivery_fee: null,
+        sokhra_commission: null,
+        picked_up_at: null,
+        delivered_at: null,
+        cash_collected: false,
+        courier_lat: null,
+        courier_lng: null,
+        courier_location_at: null,
       };
 
       const cancelledTrip = {
@@ -346,6 +430,17 @@ describe('TripService', () => {
         dropoff_lat: null,
         dropoff_lng: null,
         courier_id: null,
+        assigned_at: null,
+        city: null,
+        customer_phone: null,
+        delivery_fee: null,
+        sokhra_commission: null,
+        picked_up_at: null,
+        delivered_at: null,
+        cash_collected: false,
+        courier_lat: null,
+        courier_lng: null,
+        courier_location_at: null,
       };
 
       mockFindTripById.mockResolvedValue(mockTrip);
@@ -373,6 +468,17 @@ describe('TripService', () => {
         dropoff_lat: null,
         dropoff_lng: null,
         courier_id: null,
+        assigned_at: null,
+        city: null,
+        customer_phone: null,
+        delivery_fee: null,
+        sokhra_commission: null,
+        picked_up_at: null,
+        delivered_at: null,
+        cash_collected: false,
+        courier_lat: null,
+        courier_lng: null,
+        courier_location_at: null,
       };
 
       mockFindTripById.mockResolvedValue(mockTrip);

@@ -40,6 +40,8 @@ const MIGRATION_FILES = [
   '020_trips_add_pickup_dropoff_lat_lng.sql',
   '021_trips_add_courier_id.sql',
   '022_trips_add_assigned_at.sql',
+  '023_trips_add_city_customer_phone.sql',
+  '024_trips_delivery_flow.sql',
 ];
 
 const MIGRATIONS_DIR = path.join(__dirname, 'migrations');

@@ -39,5 +39,19 @@ export const TripErrorMessages = {
     PICKUP_REQUIRED: 'L\'URL de lieu de prise en charge est requise',
     DROPOFF_REQUIRED: 'L\'URL de lieu de livraison est requise',
     LOCATION_URL_INVALID: 'L\'URL doit commencer par http ou https (max 500 caractères)',
+    PICKUP_COORDS_REQUIRED:
+      'Le lien de prise en charge ne contient pas de coordonnées GPS. Utilisez un lien Google Maps ou WhatsApp avec coordonnées (ex. ...?q=35.7595,-5.8340).',
+    DROPOFF_COORDS_REQUIRED:
+      'Le lien de livraison ne contient pas de coordonnées GPS. Utilisez un lien Google Maps ou WhatsApp avec coordonnées (ex. ...?q=35.7595,-5.8340).',
+    CITY_REQUIRED: 'La ville de la course est requise',
+    CITY_NOT_SERVED: (city: string): string =>
+      `La ville "${city}" n'est pas encore desservie. Seule Tanger est disponible pour le moment.`,
+    PRICE_REQUIRED: 'Le montant à récupérer chez le client est requis (nombre positif).',
+    LAT_LNG_REQUIRED: 'La position (lat, lng) est requise.',
+    TOO_FAR_FROM_PICKUP:
+      'Vous êtes trop loin du point de prise en charge. Approchez-vous pour confirmer la réception.',
+    HAS_ACTIVE_TRIP:
+      'Vous avez déjà une course en cours. Terminez-la avant d\'en accepter une autre.',
+    INVALID_STATE: 'Action impossible dans l\'état actuel de la course.',
   },
 };

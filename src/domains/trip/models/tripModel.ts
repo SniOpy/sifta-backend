@@ -20,12 +20,16 @@ export async function createTrip(
   price?: number | null,
   currency: string = 'MAD',
   pickupLatLng?: { lat: number; lng: number } | null,
-  dropoffLatLng?: { lat: number; lng: number } | null
+  dropoffLatLng?: { lat: number; lng: number } | null,
+  city?: string | null,
+  customerPhone?: string | null,
+  deliveryFee?: number | null,
+  sokhraCommission?: number | null
 ): Promise<Trip> {
   const id = uuidv4();
   const query = `
-    INSERT INTO trips (id, user_id, from_location, to_location, status, price, currency, payment_status, pickup_lat, pickup_lng, dropoff_lat, dropoff_lng)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+    INSERT INTO trips (id, user_id, from_location, to_location, status, price, currency, payment_status, pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, city, customer_phone, delivery_fee, sokhra_commission)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
     RETURNING *
   `;
 
@@ -42,6 +46,10 @@ export async function createTrip(
     pickupLatLng?.lng ?? null,
     dropoffLatLng?.lat ?? null,
     dropoffLatLng?.lng ?? null,
+    city ?? null,
+    customerPhone ?? null,
+    deliveryFee ?? null,
+    sokhraCommission ?? null,
   ]);
 
   const row = result.rows[0];
@@ -244,6 +252,85 @@ export async function claimTripById(
 }
 
 /**
+ * Confirme la réception (pickup) : accepted -> in_progress.
+ * Atomique : uniquement si le trip appartient au livreur et est 'accepted'.
+ * Retourne le trip mis à jour ou null si non applicable.
+ */
+export async function markTripPickedUp(
+  tripId: string,
+  courierId: string
+): Promise<Trip | null> {
+  const query = `
+    UPDATE trips
+    SET status = 'in_progress', picked_up_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+    WHERE id = $1 AND courier_id = $2 AND status = 'accepted'
+    RETURNING *
+  `;
+  const result = await pool.query(query, [tripId, courierId]);
+  if (result.rows.length === 0) return null;
+  return mapRowToTrip(result.rows[0]);
+}
+
+/**
+ * Confirme la livraison + encaissement : in_progress -> completed.
+ * Atomique : uniquement si le trip appartient au livreur et est 'in_progress'.
+ * Marque payment_status='paid' et cash_collected=true.
+ * Retourne le trip mis à jour ou null si non applicable.
+ */
+export async function markTripDelivered(
+  tripId: string,
+  courierId: string
+): Promise<Trip | null> {
+  const query = `
+    UPDATE trips
+    SET status = 'completed', delivered_at = CURRENT_TIMESTAMP, cash_collected = true,
+        payment_status = 'paid', updated_at = CURRENT_TIMESTAMP
+    WHERE id = $1 AND courier_id = $2 AND status = 'in_progress'
+    RETURNING *
+  `;
+  const result = await pool.query(query, [tripId, courierId]);
+  if (result.rows.length === 0) return null;
+  return mapRowToTrip(result.rows[0]);
+}
+
+/**
+ * Met à jour la dernière position GPS du livreur sur une course active.
+ * Uniquement si le trip appartient au livreur et est accepted/in_progress.
+ */
+export async function updateCourierLocation(
+  tripId: string,
+  courierId: string,
+  lat: number,
+  lng: number
+): Promise<Trip | null> {
+  const query = `
+    UPDATE trips
+    SET courier_lat = $3, courier_lng = $4, courier_location_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+    WHERE id = $1 AND courier_id = $2 AND status IN ('accepted', 'in_progress')
+    RETURNING *
+  `;
+  const result = await pool.query(query, [tripId, courierId, lat, lng]);
+  if (result.rows.length === 0) return null;
+  return mapRowToTrip(result.rows[0]);
+}
+
+/**
+ * Retourne la course active (accepted ou in_progress) d'un livreur, ou null.
+ * Sert à imposer une seule course active à la fois.
+ */
+export async function findActiveTripByCourier(courierId: string): Promise<Trip | null> {
+  const query = `
+    SELECT * FROM trips
+    WHERE courier_id = $1 AND status IN ('accepted', 'in_progress')
+    ORDER BY assigned_at DESC
+    LIMIT 1
+  `;
+  const result = await pool.query(query, [courierId]);
+  if (result.rows.length === 0) return null;
+  return mapRowToTrip(result.rows[0]);
+}
+
+/**
  * Supprime un trajet (principalement pour les tests)
  * @param id - ID du trajet
  */
@@ -276,5 +363,15 @@ function mapRowToTrip(row: any): Trip {
     dropoff_lng: num(row.dropoff_lng),
     courier_id: row.courier_id ?? null,
     assigned_at: row.assigned_at != null ? new Date(row.assigned_at) : null,
+    city: row.city ?? null,
+    customer_phone: row.customer_phone ?? null,
+    delivery_fee: num(row.delivery_fee),
+    sokhra_commission: num(row.sokhra_commission),
+    picked_up_at: row.picked_up_at != null ? new Date(row.picked_up_at) : null,
+    delivered_at: row.delivered_at != null ? new Date(row.delivered_at) : null,
+    cash_collected: Boolean(row.cash_collected),
+    courier_lat: num(row.courier_lat),
+    courier_lng: num(row.courier_lng),
+    courier_location_at: row.courier_location_at != null ? new Date(row.courier_location_at) : null,
   };
 }

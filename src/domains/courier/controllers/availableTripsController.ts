@@ -3,26 +3,107 @@ import {
   findTripsAvailableInBoundingBox,
   claimTripById,
   findTripById,
+  markTripPickedUp,
+  markTripDelivered,
+  updateCourierLocation,
+  findActiveTripByCourier,
 } from '../../trip/models/tripModel';
+import { incrementCommissionDue } from '../../course/models/courierAccountModel';
 import { boundingBox, haversineKm } from '../../../shared/utils/geo';
+import {
+  computeDeliveryPricing,
+  ETA_MIN_PER_KM,
+  PICKUP_GEOFENCE_KM,
+  PICKUP_GEOFENCE_ENABLED,
+} from '../../../shared/pricing/deliveryPricing';
 import { successResponse } from '../../../shared/responses/apiResponse';
-import { UnauthorizedError, NotFoundError, ConflictError, ValidationError, ForbiddenError } from '../../../shared/errors/appError';
+import {
+  UnauthorizedError,
+  NotFoundError,
+  ConflictError,
+  ValidationError,
+  ForbiddenError,
+} from '../../../shared/errors/appError';
 import { AuthErrorMessages } from '../../auth/constants/errorMessages';
 import { TripErrorMessages } from '../../trip/constants/errorMessages';
-import type { CourierAvailableTripResponse, CourierTripDetailResponse } from '../../trip/types';
+import type { Trip, CourierAvailableTripResponse, CourierTripDetailResponse } from '../../trip/types';
 
-const RADIUS_KM = 3;
-/** Minutes par km (estimation trajet livreur → pickup) */
-const ETA_MIN_PER_KM = 2;
-/** Pricing MVP: MAD par km si pas de prix stocké */
-const AMOUNT_PER_KM = 5;
-const MIN_AMOUNT_TOTAL = 20;
-const DELIVERY_FEE_RATIO = 0.2;
-const MIN_DELIVERY_FEE = 8;
+// Phase test mono-ville (Tanger) : rayon large pour couvrir toute la ville
+// quelle que soit la position du livreur. À réduire au déploiement multi-villes.
+const RADIUS_KM = 30;
+
+/**
+ * Tarification d'une course : utilise les valeurs figées en base
+ * (delivery_fee / sokhra_commission). Fallback de calcul pour les courses
+ * antérieures à la migration (sans ces colonnes).
+ */
+function derivePricing(trip: Trip): {
+  orderAmount: number;
+  deliveryFee: number;
+  commission: number;
+  clientTotal: number;
+} {
+  const orderAmount = trip.price != null && trip.price > 0 ? Math.round(trip.price) : 0;
+
+  if (trip.delivery_fee != null) {
+    const deliveryFee = Math.round(trip.delivery_fee);
+    const commission = Math.round(trip.sokhra_commission ?? 0);
+    return {
+      orderAmount,
+      deliveryFee,
+      commission,
+      clientTotal: orderAmount + deliveryFee + commission,
+    };
+  }
+
+  const distanceKm =
+    trip.pickup_lat != null &&
+    trip.pickup_lng != null &&
+    trip.dropoff_lat != null &&
+    trip.dropoff_lng != null
+      ? haversineKm(
+          { lat: trip.pickup_lat, lng: trip.pickup_lng },
+          { lat: trip.dropoff_lat, lng: trip.dropoff_lng }
+        )
+      : 0;
+  const pricing = computeDeliveryPricing(distanceKm, orderAmount);
+  return {
+    orderAmount,
+    deliveryFee: pricing.deliveryFee,
+    commission: pricing.commission,
+    clientTotal: pricing.clientTotal,
+  };
+}
+
+/**
+ * Mappe un Trip vers le DTO de détail livreur (montants figés inclus).
+ */
+function mapCourierDetail(trip: Trip): CourierTripDetailResponse {
+  const { orderAmount, deliveryFee, commission, clientTotal } = derivePricing(trip);
+  return {
+    id: trip.id,
+    status: trip.status,
+    pickup_url: trip.from_location,
+    dropoff_url: trip.to_location,
+    customer_phone: trip.customer_phone ?? null,
+    order_amount: orderAmount,
+    amount_total: clientTotal,
+    delivery_fee: deliveryFee,
+    commission,
+    client_total: clientTotal,
+    created_at: trip.created_at,
+    pickup_lat: trip.pickup_lat ?? null,
+    pickup_lng: trip.pickup_lng ?? null,
+    dropoff_lat: trip.dropoff_lat ?? null,
+    dropoff_lng: trip.dropoff_lng ?? null,
+    picked_up_at: trip.picked_up_at ?? null,
+    delivered_at: trip.delivered_at ?? null,
+  };
+}
 
 /**
  * GET /courier/trips/available?lat=..&lng=..
- * Retourne les courses WAITING (pending) à moins de 3 km du livreur.
+ * Retourne les courses pending dans le rayon configuré du livreur.
  */
 export async function getAvailableTrips(req: Request, res: Response): Promise<void> {
   if (!req.user) {
@@ -54,22 +135,7 @@ export async function getAvailableTrips(req: Request, res: Response): Promise<vo
     const distanceKmToPickup = haversineKm(courierPos, { lat: pickupLat, lng: pickupLng });
     if (distanceKmToPickup > RADIUS_KM) continue;
 
-    const distancePickupDropoffKm =
-      trip.dropoff_lat != null && trip.dropoff_lng != null
-        ? haversineKm(
-            { lat: pickupLat, lng: pickupLng },
-            { lat: trip.dropoff_lat, lng: trip.dropoff_lng }
-          )
-        : 0;
-
-    const amountTotal =
-      trip.price != null && trip.price > 0
-        ? Math.round(trip.price)
-        : Math.max(MIN_AMOUNT_TOTAL, Math.round(distancePickupDropoffKm * AMOUNT_PER_KM));
-    const deliveryFee = Math.max(
-      MIN_DELIVERY_FEE,
-      Math.round(amountTotal * DELIVERY_FEE_RATIO)
-    );
+    const { orderAmount, deliveryFee, commission, clientTotal } = derivePricing(trip);
 
     dtos.push({
       id: trip.id,
@@ -77,8 +143,11 @@ export async function getAvailableTrips(req: Request, res: Response): Promise<vo
       dropoff_location_url: trip.to_location,
       distance_km_estimated: Math.round(distanceKmToPickup * 10) / 10,
       eta_minutes_estimated: Math.round(distanceKmToPickup * ETA_MIN_PER_KM),
-      amount_total: amountTotal,
+      order_amount: orderAmount,
+      amount_total: clientTotal,
       delivery_fee: deliveryFee,
+      commission,
+      client_total: clientTotal,
       pickup_lat: pickupLat,
       pickup_lng: pickupLng,
       dropoff_lat: trip.dropoff_lat ?? null,
@@ -91,11 +160,17 @@ export async function getAvailableTrips(req: Request, res: Response): Promise<vo
 
 /**
  * POST /courier/trips/:id/claim — Accepter (prendre) une course.
- * 200 + trip si succès ; 404 si trip inexistant ; 409 si déjà prise par un autre.
+ * Refuse (409) si le livreur a déjà une course active (accepted/in_progress).
  */
 export async function claimTrip(req: Request, res: Response): Promise<void> {
   if (!req.user) {
     throw new UnauthorizedError(AuthErrorMessages.USER.NOT_AUTHENTICATED);
+  }
+
+  // Une seule course active à la fois (conçu pour autoriser le multi plus tard).
+  const active = await findActiveTripByCourier(req.user.id);
+  if (active) {
+    throw new ConflictError(TripErrorMessages.VALIDATION.HAS_ACTIVE_TRIP);
   }
 
   const tripId = req.params.id;
@@ -114,8 +189,24 @@ export async function claimTrip(req: Request, res: Response): Promise<void> {
 }
 
 /**
+ * GET /courier/trips/active — Course active du livreur (accepted/in_progress) ou null.
+ */
+export async function getActiveCourierTrip(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new UnauthorizedError(AuthErrorMessages.USER.NOT_AUTHENTICATED);
+  }
+
+  const active = await findActiveTripByCourier(req.user.id);
+  successResponse(
+    res,
+    { trip: active ? mapCourierDetail(active) : null },
+    'Course active récupérée',
+    200
+  );
+}
+
+/**
  * GET /courier/trips/:id — Détail d'une mission assignée au livreur.
- * 200 si courier_id === req.user.id ou admin ; 403 sinon ; 404 si trip absent.
  */
 export async function getCourierTripById(req: Request, res: Response): Promise<void> {
   if (!req.user) {
@@ -134,39 +225,119 @@ export async function getCourierTripById(req: Request, res: Response): Promise<v
     throw new ForbiddenError('Vous n\'êtes pas autorisé à accéder à cette mission.');
   }
 
-  const pickupLat = trip.pickup_lat;
-  const pickupLng = trip.pickup_lng;
-  const distancePickupDropoffKm =
-    trip.dropoff_lat != null && trip.dropoff_lng != null && pickupLat != null && pickupLng != null
-      ? haversineKm(
-          { lat: pickupLat, lng: pickupLng },
-          { lat: trip.dropoff_lat, lng: trip.dropoff_lng }
-        )
-      : 0;
+  successResponse(res, { trip: mapCourierDetail(trip) }, 'Mission récupérée', 200);
+}
 
-  const amountTotal =
-    trip.price != null && trip.price > 0
-      ? Math.round(trip.price)
-      : Math.max(MIN_AMOUNT_TOTAL, Math.round(distancePickupDropoffKm * AMOUNT_PER_KM));
-  const deliveryFee = Math.max(
-    MIN_DELIVERY_FEE,
-    Math.round(amountTotal * DELIVERY_FEE_RATIO)
-  );
+/**
+ * POST /courier/trips/:id/location { lat, lng } — Met à jour la position GPS live.
+ */
+export async function updateCourierLocationHandler(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new UnauthorizedError(AuthErrorMessages.USER.NOT_AUTHENTICATED);
+  }
 
-  const dto: CourierTripDetailResponse = {
-    id: trip.id,
-    status: trip.status,
-    pickup_url: trip.from_location,
-    dropoff_url: trip.to_location,
-    customer_phone: null,
-    amount_total: amountTotal,
-    delivery_fee: deliveryFee,
-    created_at: trip.created_at,
-    pickup_lat: trip.pickup_lat ?? null,
-    pickup_lng: trip.pickup_lng ?? null,
-    dropoff_lat: trip.dropoff_lat ?? null,
-    dropoff_lng: trip.dropoff_lng ?? null,
-  };
+  const tripId = req.params.id;
+  const lat = parseFloat(req.body.lat);
+  const lng = parseFloat(req.body.lng);
+  if (Number.isNaN(lat) || Number.isNaN(lng)) {
+    throw new ValidationError(TripErrorMessages.VALIDATION.LAT_LNG_REQUIRED);
+  }
 
-  successResponse(res, { trip: dto }, 'Mission récupérée', 200);
+  const updated = await updateCourierLocation(tripId, req.user.id, lat, lng);
+  if (!updated) {
+    // Soit course inexistante / pas la sienne, soit pas dans un état actif.
+    const existing = await findTripById(tripId);
+    if (!existing) throw new NotFoundError(TripErrorMessages.TRIP.NOT_FOUND);
+    throw new ValidationError(TripErrorMessages.VALIDATION.INVALID_STATE);
+  }
+
+  successResponse(res, { trip: mapCourierDetail(updated) }, 'Position mise à jour', 200);
+}
+
+/**
+ * POST /courier/trips/:id/pickup { lat, lng } — Confirme la réception (accepted -> in_progress).
+ * Géofence : refuse (400) si le livreur est à plus de PICKUP_GEOFENCE_KM du pickup.
+ */
+export async function confirmPickup(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new UnauthorizedError(AuthErrorMessages.USER.NOT_AUTHENTICATED);
+  }
+
+  const tripId = req.params.id;
+  const lat = parseFloat(req.body.lat);
+  const lng = parseFloat(req.body.lng);
+  if (Number.isNaN(lat) || Number.isNaN(lng)) {
+    throw new ValidationError(TripErrorMessages.VALIDATION.LAT_LNG_REQUIRED);
+  }
+
+  const trip = await findTripById(tripId);
+  if (!trip) {
+    throw new NotFoundError(TripErrorMessages.TRIP.NOT_FOUND);
+  }
+  if (trip.courier_id !== req.user.id) {
+    throw new ForbiddenError('Vous n\'êtes pas autorisé à accéder à cette mission.');
+  }
+  if (trip.status !== 'accepted') {
+    throw new ValidationError(TripErrorMessages.VALIDATION.INVALID_STATE);
+  }
+
+  // Géofence : la position du livreur doit être proche du point de prise en charge.
+  // TEMPORAIRE : désactivable via PICKUP_GEOFENCE_ENABLED pour la phase de test.
+  if (PICKUP_GEOFENCE_ENABLED && trip.pickup_lat != null && trip.pickup_lng != null) {
+    const distanceKm = haversineKm({ lat, lng }, { lat: trip.pickup_lat, lng: trip.pickup_lng });
+    if (distanceKm > PICKUP_GEOFENCE_KM) {
+      throw new ValidationError(TripErrorMessages.VALIDATION.TOO_FAR_FROM_PICKUP);
+    }
+  }
+
+  // Met à jour la position puis bascule en in_progress.
+  await updateCourierLocation(tripId, req.user.id, lat, lng);
+  const updated = await markTripPickedUp(tripId, req.user.id);
+  if (!updated) {
+    throw new ValidationError(TripErrorMessages.VALIDATION.INVALID_STATE);
+  }
+
+  successResponse(res, { trip: mapCourierDetail(updated) }, 'Réception confirmée', 200);
+}
+
+/**
+ * POST /courier/trips/:id/deliver { lat, lng } — Confirme livraison + encaissement
+ * (in_progress -> completed) et crédite la commission due du livreur.
+ */
+export async function confirmDelivery(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    throw new UnauthorizedError(AuthErrorMessages.USER.NOT_AUTHENTICATED);
+  }
+
+  const tripId = req.params.id;
+  const lat = parseFloat(req.body.lat);
+  const lng = parseFloat(req.body.lng);
+
+  const trip = await findTripById(tripId);
+  if (!trip) {
+    throw new NotFoundError(TripErrorMessages.TRIP.NOT_FOUND);
+  }
+  if (trip.courier_id !== req.user.id) {
+    throw new ForbiddenError('Vous n\'êtes pas autorisé à accéder à cette mission.');
+  }
+  if (trip.status !== 'in_progress') {
+    throw new ValidationError(TripErrorMessages.VALIDATION.INVALID_STATE);
+  }
+
+  if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+    await updateCourierLocation(tripId, req.user.id, lat, lng);
+  }
+
+  const updated = await markTripDelivered(tripId, req.user.id);
+  if (!updated) {
+    throw new ValidationError(TripErrorMessages.VALIDATION.INVALID_STATE);
+  }
+
+  // Commission Sokhra due par le livreur (10% de F), figée à la création.
+  const { commission } = derivePricing(updated);
+  if (commission > 0) {
+    await incrementCommissionDue(req.user.id, commission);
+  }
+
+  successResponse(res, { trip: mapCourierDetail(updated) }, 'Livraison confirmée', 200);
 }

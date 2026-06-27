@@ -27,6 +27,8 @@ export async function createTrip(
     to: toLocation,
     price: req.body.price,
     currency: req.body.currency,
+    city: req.body.city,
+    customer_phone: req.body.customer_phone,
   };
 
   const trip = await tripService.createTrip(req.user.id, input);
